@@ -1,0 +1,1416 @@
+<title>메카독 사전조사 보드</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 회의용 보드 — 머리말(결정할 것) → 고정 탭 6개 → 탭마다 "맵 + 설명" 2단, 좁으면 1단 */
+:root{
+  --bg:#eceeec;--surface:#f8f9f8;--ink:#1c2220;--muted:#5b6662;--line:#c9d0cc;
+  --robot:#d9a520;--robot-ink:#1c2220;--accent:#b88a00;
+  --ok:#2e8a55;--ok-bg:#dcefe3;--warn:#c07d00;--warn-bg:#f6e8c8;--crit:#cc3229;--crit-bg:#f7dad6;
+  --person:#c2417f;--route:#24935c;--floor:#e2e5e2;--floor2:#d6dbd7;--box:#c9b48f;--rack:#7b8a9a;--wall:#8b9893;--signal:#7a4fc0;
+  --tape-green:#2fa35a;--tape-blue:#2b6fd6;--tape-yellow:#e2bd12;--tape-pink:#e0559b;
+  --font-sans:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131715;--surface:#1b201e;--ink:#e3e8e5;--muted:#97a39e;--line:#323b37;
+  --robot:#e3b33a;--accent:#e8b820;
+  --ok:#55c084;--ok-bg:#1b3326;--warn:#e3a43a;--warn-bg:#3a2e14;--crit:#f0645c;--crit-bg:#3d1d1b;
+  --person:#ec6fa8;--route:#46c083;--floor:#202624;--floor2:#2a312e;--box:#6b5d43;--rack:#7f93a8;--wall:#59635f;--signal:#ad86e6;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131715;--surface:#1b201e;--ink:#e3e8e5;--muted:#97a39e;--line:#323b37;
+  --robot:#e3b33a;--accent:#e8b820;
+  --ok:#55c084;--ok-bg:#1b3326;--warn:#e3a43a;--warn-bg:#3a2e14;--crit:#f0645c;--crit-bg:#3d1d1b;
+  --person:#ec6fa8;--route:#46c083;--floor:#202624;--floor2:#2a312e;--box:#6b5d43;--rack:#7f93a8;--wall:#59635f;--signal:#ad86e6;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:14.5px;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{text-wrap:balance;line-height:1.3;margin:0}
+h1{font-size:26px;font-weight:700}
+h2{font-size:19px;font-weight:700}
+h3{font-size:15px;font-weight:600}
+p{margin:0}
+a{color:inherit}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.eyebrow{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* header */
+header{padding-block:28px 18px}
+.head-row{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:12.5px;white-space:nowrap}
+.chip b{font-family:var(--font-mono);font-weight:600}
+.chip.due{border-color:var(--crit);color:var(--crit)}
+.lede{margin-top:10px;color:var(--muted);max-width:68ch}
+
+.decide{margin-top:20px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:14px 16px}
+.decide-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.ditem{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;border:1px solid transparent}
+.ditem:hover{border-color:var(--line)}
+.ditem input{margin-top:4px;accent-color:var(--ok);width:16px;height:16px;flex:none}
+.ditem label{cursor:pointer;min-width:0}
+.ditem .q{font-weight:600;font-size:13.5px}
+.ditem .s{font-size:12.5px;color:var(--muted)}
+.ditem .go{font-size:12px;color:var(--accent);text-decoration:none;font-family:var(--font-mono);white-space:nowrap}
+.ditem.done .q{text-decoration:line-through;color:var(--muted)}
+details.mentor{margin-top:10px;font-size:13.5px}
+details.mentor summary{cursor:pointer;color:var(--muted)}
+details.mentor ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+
+/* tabs */
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.tabrow{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabrow::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:0;background:none;color:var(--muted);font:inherit;font-size:14px;font-weight:600;padding:12px 14px 11px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap;display:flex;gap:7px;align-items:center}
+.tab .n{font-family:var(--font-mono);font-size:11.5px;font-weight:500}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--robot)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+main{padding-block:24px 60px}
+section.panel{display:grid;gap:22px}
+.sec-head{display:grid;gap:6px}
+.sec-head p{color:var(--muted);max-width:70ch}
+
+.two{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.two{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.card>*+*{margin-top:10px}
+.stack{display:grid;gap:14px;min-width:0}
+
+/* evidence tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:6px;align-content:start}
+.tile .big{font-family:var(--font-mono);font-size:30px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .big small{font-size:15px;font-weight:500;margin-left:2px}
+.tile .cap{font-size:13.5px}
+.tile .src{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px}
+.tile .src a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.tile.hot .big{color:var(--crit)}
+
+/* matrix */
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+#planTable [data-col].on{background:color-mix(in srgb,var(--robot) 14%,transparent)}
+th,td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--muted);font-weight:600}
+thead th{position:sticky;top:0;background:var(--surface)}
+td.pick,th.pick{background:color-mix(in srgb,var(--robot) 12%,transparent)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.crit{background:var(--crit-bg);color:var(--crit)}
+.pill.idle{background:var(--floor2);color:var(--muted)}
+.pill.fire{background:var(--crit);color:var(--surface)}
+.cellnote{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+
+.callout{border-left:4px solid var(--robot);background:var(--surface);border-radius:0 10px 10px 0;padding:14px 16px;display:grid;gap:8px}
+.callout.warn{border-left-color:var(--warn)}
+.callout ul{margin:0;padding-left:18px;display:grid;gap:4px}
+
+/* maps */
+.map{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0}
+.map svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);padding:6px 4px 2px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{appearance:none;border:0;background:none;font:inherit;font-size:13px;padding:6px 12px;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.controls .lab{font-size:12px;color:var(--muted);margin-right:6px}
+.toggle{display:inline-flex;gap:6px;align-items:center;font-size:13px;cursor:pointer}
+.toggle input{accent-color:var(--warn);width:16px;height:16px}
+
+.robots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.robots{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rbtn{appearance:none;font:inherit;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;cursor:pointer;display:grid;gap:2px;color:var(--ink)}
+.rbtn .tag{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--robot);color:var(--robot-ink);font-family:var(--font-mono);font-weight:600}
+.rbtn .t{font-weight:600;font-size:13.5px}
+.rbtn .s{font-size:12px;color:var(--muted)}
+.rbtn[aria-pressed="true"]{border-color:var(--robot);box-shadow:0 0 0 2px color-mix(in srgb,var(--robot) 45%,transparent)}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:13.5px}
+dl.kv dt{color:var(--muted);font-size:12.5px}
+dl.kv dd{margin:0}
+
+.rolechip{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--robot);color:var(--robot-ink);font-family:var(--font-mono);font-size:12px;font-weight:600}
+.rolechip.all{background:var(--floor2);color:var(--ink)}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.fbtn{appearance:none;font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:4px 12px;cursor:pointer}
+.fbtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.specs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.specs{grid-template-columns:minmax(0,1fr)}}
+.spec{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);display:grid;gap:4px;align-content:start}
+.spec .v{font-family:var(--font-mono);font-size:20px;font-weight:600}
+.spec .d{font-size:12.5px;color:var(--muted)}
+
+.verdicts{display:grid;gap:8px}
+.verdict{display:grid;grid-template-columns:64px 34px minmax(0,1fr);gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13.5px}
+.verdict .j{font-family:var(--font-mono);font-weight:600}
+.verdict .arrow{font-family:var(--font-mono);font-size:20px;font-weight:600;text-align:center}
+.voice{font-size:13px;border:1px dashed var(--line);border-radius:8px;padding:8px 10px;color:var(--muted)}
+.voice b{color:var(--ink);font-weight:600}
+
+/* control mock */
+.console{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px}
+@media (max-width:900px){.console{grid-template-columns:minmax(0,1fr)}}
+.console .map{border-radius:10px}
+.side{display:grid;gap:10px;align-content:start;min-width:0}
+.rcard{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px}
+.rcard .tag{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--robot);color:var(--robot-ink);font-family:var(--font-mono);font-weight:600}
+.rcard .nm{font-weight:600}
+.rcard .st{color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.exits{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.exit{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);font-size:13px;display:grid;gap:2px}
+.firebtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.firebtn{border:1px solid var(--line);border-radius:8px;padding:9px;text-align:center;font-weight:600;font-size:13px;background:var(--surface);color:var(--muted)}
+.firebtn.on{background:var(--crit);border-color:var(--crit);color:var(--surface)}
+.log{border:1px solid var(--line);border-radius:10px;background:var(--surface);max-height:210px;overflow-y:auto;font-size:13px}
+.log ol{list-style:none;margin:0;padding:4px 0}
+.log li{display:grid;grid-template-columns:44px 58px 1fr;gap:8px;padding:5px 12px;border-bottom:1px solid var(--line)}
+.log li:last-child{border-bottom:0}
+.log .tm{font-family:var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.log .who{font-weight:600}
+.log li.warn .who{color:var(--warn)}
+.log li.crit .who,.log li.fire .who{color:var(--crit)}
+.log li.ok .who{color:var(--ok)}
+.log li.new{background:color-mix(in srgb,var(--robot) 14%,transparent)}
+.player{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.pbtn{appearance:none;font:inherit;font-weight:600;font-size:13.5px;border:0;border-radius:8px;padding:7px 14px;background:var(--ink);color:var(--bg);cursor:pointer}
+.pbtn.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
+.clock{font-family:var(--font-mono);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.scrub{flex:1 1 220px;min-width:0;accent-color:var(--robot)}
+.scene-now{font-size:13px;color:var(--muted)}
+.scene-now b{color:var(--ink)}
+
+/* timeline */
+.tl{display:flex;height:46px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.tl button{appearance:none;border:0;font:inherit;font-size:11.5px;color:var(--ink);background:var(--floor2);cursor:pointer;min-width:0;padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-right:1px solid var(--surface)}
+.tl button:last-child{border-right:0}
+.tl button.k-crit{background:var(--crit-bg)}
+.tl button.k-ok{background:var(--ok-bg)}
+.tl button.k-warn{background:var(--warn-bg)}
+.tl button.k-fire{background:var(--crit);color:var(--surface)}
+.tl button:hover{filter:brightness(.95)}
+.tl-scale{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:4px}
+.scenes td:first-child{font-family:var(--font-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.linkbtn{appearance:none;border:1px solid var(--line);background:none;font:inherit;font-size:12px;border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--ink);white-space:nowrap}
+.linkbtn:hover{border-color:var(--ink)}
+.mats{display:grid;gap:6px}
+.mat{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13.5px}
+.mat input{accent-color:var(--ok);width:16px;height:16px;margin-top:3px}
+.mat .u{font-size:12.5px;color:var(--muted)}
+.mat .q{font-family:var(--font-mono);font-weight:600;white-space:nowrap}
+.mat.done .nm{text-decoration:line-through;color:var(--muted)}
+.dday{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.dday .big{font-family:var(--font-mono);font-size:34px;font-weight:600;color:var(--crit);line-height:1}
+
+.sources{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px}
+.sources a{color:var(--muted)}
+
+@keyframes pulse{0%{opacity:.85;r:14}50%{opacity:.35;r:22}100%{opacity:.85;r:14}}
+.fire-pulse{animation:pulse 1.6s ease-in-out infinite}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.flow{animation:dash 1s linear infinite}
+@media (prefers-reduced-motion:reduce){.fire-pulse,.flow{animation:none}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="head-row">
+    <div>
+      <div class="eyebrow">10조 · 피지컬 AI 프로젝트 · 빌드업 조사</div>
+      <h1>메카독 사전조사 보드</h1>
+    </div>
+  </div>
+  <p class="lede">사전조사 6개 항목(배경, 평시 역할, 트리거, 비상시 동작, 관제 화면, 시연)을 탭별로 정리했습니다. 맵은 눌러서 바꿔 볼 수 있습니다.</p>
+</header>
+</div>
+
+<nav class="tabs" aria-label="조사 항목">
+  <div class="wrap">
+    <div class="tabrow" role="tablist" id="tabrow"></div>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- 1. 배경 -->
+<section class="panel" id="p-bg" role="tabpanel">
+  <div class="sec-head">
+    <div class="eyebrow">1 · 배경</div>
+    <h2>공간은 "배터리를 다루는 1층 작업장 (보관 랙 포함)" 한 곳</h2>
+    <p>건물 두 개를 붙이는 게 아닙니다. 공간은 채웅 안의 1층 작업장 하나이고, 그 작업장 한쪽에 배터리를 쌓아 두는 랙 구역이 있습니다. 건주 안에서는 시설이 아니라 "보관구역 순찰"이라는 역할만 가져옵니다. 크기는 기존 기획 페이지의 예시 레이아웃 그대로 약 40 m × 24 m입니다. 공동구는 빼는 쪽을 권합니다.</p>
+  </div>
+  <figure class="map" style="margin:0">
+    <div class="scroll"><svg viewBox="0 0 760 350" style="min-width:640px;display:block;width:100%;height:auto" role="img" aria-label="왼쪽: 수거센터와 작업장 두 건물을 붙이는 것이 아님. 오른쪽: 1층 작업장 한 곳 안에 배터리 보관 랙 구역, 간선 통로, 작업 라인, 사무 구역이 있음">
+      <g font-family="var(--font-sans)">
+        <!-- left: not this -->
+        <text x="125" y="58" text-anchor="middle" font-size="14" font-weight="700" fill="var(--crit)">이게 아니라</text>
+        <rect x="22" y="90" width="90" height="110" rx="4" fill="var(--floor2)" stroke="var(--wall)" stroke-width="2"/>
+        <text x="67" y="140" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)">거점</text>
+        <text x="67" y="156" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)">수거센터</text>
+        <text x="125" y="152" text-anchor="middle" font-size="22" font-weight="700" fill="var(--muted)">+</text>
+        <rect x="138" y="90" width="90" height="110" rx="4" fill="var(--floor2)" stroke="var(--wall)" stroke-width="2"/>
+        <text x="183" y="140" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)">1층</text>
+        <text x="183" y="156" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)">작업장</text>
+        <path d="M14 80 L236 210 M236 80 L14 210" stroke="var(--crit)" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+        <text x="125" y="236" text-anchor="middle" font-size="12" fill="var(--muted)">건물 두 개를 붙이면</text>
+        <text x="125" y="252" text-anchor="middle" font-size="12" fill="var(--muted)">공간도 커지고 이야기도 흐려짐</text>
+        <line x1="258" y1="30" x2="258" y2="320" stroke="var(--line)" stroke-dasharray="4 5"/>
+
+        <!-- right: this -->
+        <text x="290" y="24" font-size="14" font-weight="700" fill="var(--ok)">이거예요 · 1층 작업장 한 곳</text>
+        <rect x="290" y="40" width="440" height="264" fill="var(--floor)"/>
+        <!-- storage band -->
+        <rect x="296" y="46" width="428" height="92" rx="4" fill="color-mix(in srgb,var(--robot) 16%,transparent)" stroke="var(--robot)" stroke-width="2" stroke-dasharray="6 4"/>
+        <g transform="translate(0 6)">
+        <g>
+          <rect x="314" y="70" width="118" height="54" rx="3" fill="var(--rack)" fill-opacity=".3" stroke="var(--rack)"/>
+          <rect x="451" y="70" width="118" height="54" rx="3" fill="var(--rack)" fill-opacity=".3" stroke="var(--rack)"/>
+          <rect x="588" y="70" width="118" height="54" rx="3" fill="var(--rack)" fill-opacity=".3" stroke="var(--rack)"/>
+        </g>
+        <g fill="var(--ok)" fill-opacity=".75">
+          <rect x="322" y="78" width="14" height="18" rx="2"/><rect x="340" y="78" width="14" height="18" rx="2"/><rect x="358" y="78" width="14" height="18" rx="2"/><rect x="376" y="78" width="14" height="18" rx="2"/><rect x="394" y="78" width="14" height="18" rx="2"/>
+          <rect x="322" y="100" width="14" height="18" rx="2"/><rect x="340" y="100" width="14" height="18" rx="2"/><rect x="358" y="100" width="14" height="18" rx="2"/>
+          <rect x="459" y="78" width="14" height="18" rx="2"/><rect x="477" y="78" width="14" height="18" rx="2"/><rect x="495" y="78" width="14" height="18" rx="2"/><rect x="513" y="78" width="14" height="18" rx="2"/>
+          <rect x="459" y="100" width="14" height="18" rx="2"/><rect x="477" y="100" width="14" height="18" rx="2"/><rect x="495" y="100" width="14" height="18" rx="2"/><rect x="513" y="100" width="14" height="18" rx="2"/><rect x="531" y="100" width="14" height="18" rx="2"/>
+          <rect x="596" y="78" width="14" height="18" rx="2"/><rect x="614" y="78" width="14" height="18" rx="2"/><rect x="632" y="78" width="14" height="18" rx="2"/>
+          <rect x="596" y="100" width="14" height="18" rx="2"/><rect x="614" y="100" width="14" height="18" rx="2"/><rect x="632" y="100" width="14" height="18" rx="2"/><rect x="650" y="100" width="14" height="18" rx="2"/>
+        </g>
+        <rect x="412" y="100" width="14" height="18" rx="2" fill="var(--crit)"/>
+        </g>
+        <rect x="296" y="46" width="150" height="20" rx="3" fill="var(--robot)"/>
+        <text x="371" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--robot-ink)">보관동 구역 · 건주 안</text>
+        <text x="716" y="61" text-anchor="end" font-size="11.5" font-weight="600" fill="var(--ink)">배터리 보관 랙 · 순찰 A</text>
+        <!-- corridor -->
+        <rect x="290" y="158" width="440" height="28" fill="var(--route)" fill-opacity=".22"/>
+        <line x1="290" y1="172" x2="730" y2="172" stroke="var(--route)" stroke-width="4"/>
+        <text x="510" y="177" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--route)" style="paint-order:stroke" stroke="var(--floor)" stroke-width="4">간선 통로 · 대피로</text>
+        <!-- work -->
+        <rect x="296" y="194" width="428" height="106" rx="4" fill="color-mix(in srgb,var(--person) 10%,transparent)" stroke="var(--person)" stroke-width="2" stroke-dasharray="6 4"/>
+        <rect x="296" y="278" width="140" height="20" rx="3" fill="var(--person)"/>
+        <text x="366" y="292" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--surface)">작업장 구역 · 채웅 안</text>
+        <rect x="314" y="204" width="186" height="50" rx="3" fill="var(--floor2)" stroke="var(--line)"/>
+        <text x="407" y="233" text-anchor="middle" font-size="12" font-weight="600" fill="var(--muted)">작업 라인 1</text>
+        <rect x="520" y="204" width="186" height="50" rx="3" fill="var(--floor2)" stroke="var(--line)"/>
+        <text x="613" y="233" text-anchor="middle" font-size="12" font-weight="600" fill="var(--muted)">작업 라인 2</text>
+        <rect x="450" y="270" width="120" height="28" rx="3" fill="var(--floor2)" stroke="var(--line)"/>
+        <text x="510" y="289" text-anchor="middle" font-size="12" font-weight="600" fill="var(--muted)">사무 · 도크</text>
+        <!-- branch routes (지선) -->
+        <g fill="none" stroke="var(--route)" stroke-width="3" stroke-dasharray="7 5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M304 158 V69 H716 V158"/>
+          <path d="M441 69 V158 M578 69 V158"/>
+          <path d="M304 186 V262 H716 V186"/>
+          <path d="M510 186 V262"/>
+        </g>
+        <g fill="var(--person)"><circle cx="372" cy="150" r="5"/><circle cx="650" cy="69" r="5"/><circle cx="600" cy="262" r="5"/><circle cx="410" cy="196" r="5"/></g>
+        <!-- walls and exits -->
+        <path d="M290 156 V40 H730 V156 M730 188 V304 H290 V188" fill="none" stroke="var(--wall)" stroke-width="4" stroke-linejoin="round"/>
+        <rect x="283" y="156" width="12" height="32" rx="2" fill="var(--ok)"/>
+        <rect x="725" y="156" width="12" height="32" rx="2" fill="var(--ok)"/>
+        <text x="300" y="150" font-size="11" font-weight="700" fill="var(--ok)">비상구 1</text>
+        <text x="720" y="150" text-anchor="end" font-size="11" font-weight="700" fill="var(--ok)">비상구 2</text>
+        <!-- dims -->
+        <g font-family="var(--font-mono)" font-size="11" fill="var(--muted)">
+          <line x1="290" y1="318" x2="730" y2="318" stroke="var(--muted)"/><line x1="290" y1="313" x2="290" y2="323" stroke="var(--muted)"/><line x1="730" y1="313" x2="730" y2="323" stroke="var(--muted)"/>
+          <text x="510" y="336" text-anchor="middle">약 40 m</text>
+          <line x1="746" y1="40" x2="746" y2="304" stroke="var(--muted)"/><line x1="741" y1="40" x2="751" y2="40" stroke="var(--muted)"/><line x1="741" y1="304" x2="751" y2="304" stroke="var(--muted)"/>
+          <text x="754" y="176" text-anchor="middle" transform="rotate(90 754 176)">약 24 m</text>
+        </g>
+      </g>
+    </svg></div>
+    <figcaption class="legend" style="display:grid;gap:4px">
+      <span><i style="background:color-mix(in srgb,var(--robot) 30%,transparent);border:1px dashed var(--robot)"></i><b style="color:var(--ink)">보관동 구역 (위)</b> 건주 안. 배터리를 쌓아 두는 랙. 로봇 A가 순찰</span>
+      <span><i style="background:var(--route)"></i><b style="color:var(--ink)">간선 통로 (가운데 실선)</b> 두 구역을 잇고 양쪽 비상구로 나가는 큰길. 로봇 B가 점검</span>
+      <span><i style="background:none;border:2px dashed var(--route)"></i><b style="color:var(--ink)">지선 (점선)</b> 구역마다 둘레와 랙·라인 사이를 돌아 간선으로 나오는 길. 화살표는 안 그림. 방향은 불이 난 위치에 따라 로봇이 그때 정함</span>
+      <span><i style="background:color-mix(in srgb,var(--person) 25%,transparent);border:1px dashed var(--person)"></i><b style="color:var(--ink)">작업장 구역 (아래)</b> 채웅 안. 작업 라인과 사무 구역. 로봇 C가 점검</span>
+      <span><b style="color:var(--ink)">→ 건물은 하나, 지붕도 하나, 크기도 그대로.</b> 한 층 안을 보관동 구역과 작업장 구역으로 나눈 것입니다</span>
+      <span><i style="background:var(--crit)"></i><b style="color:var(--ink)">빨간 칸</b> 손상된 배터리. 아리셀도 작업장 안 출입구 쪽에 쌓인 배터리에서 불이 났습니다</span>
+    </figcaption>
+  </figure>
+
+  <div class="tiles">
+    <div class="tile hot"><span class="eyebrow">아리셀 · 2024.6.24</span><span class="big">15<small>초</small></span><span class="cap">작업실 전체가 연기로 뒤덮이는 데 걸린 시간. 경기소방이 내부 CCTV로 확인했습니다. 최종 사망자는 23명입니다.</span><span class="src">증거 자료 · <a href="https://www.newsis.com/view/NISX20240624_0002784984" target="_blank" rel="noopener">뉴시스 15초 ↗</a> <a href="https://www.ajunews.com/view/20240823120013719" target="_blank" rel="noopener">아주경제 23명 ↗</a></span></div>
+    <div class="tile hot"><span class="eyebrow">소방청 분석 · 2026.4</span><span class="big">39<small>%</small></span><span class="cap">최근 화재 사망자 중 대피하는 도중에 숨진 비율 (약 39%)</span><span class="src">증거 자료 · <a href="https://www.koreatimes.co.kr/southkorea/20260421/instinct-to-flee-fire-can-be-fatal-officials-warn" target="_blank" rel="noopener">Korea Times ↗</a></span></div>
+    <div class="tile"><span class="eyebrow">소방청 불시 점검 · 2018.8</span><span class="big">9<small>/10곳</small></span><span class="cap">수도권 백화점·영화관 중 위반이 나온 곳. 위반 68건 중 피난통로 장애물이 10건이었습니다.</span><span class="src">증거 자료 · <a href="https://www.khan.co.kr/article/201808051456001" target="_blank" rel="noopener">경향신문 ↗</a></span></div>
+    <div class="tile"><span class="eyebrow">인천 쿠팡 물류센터 · 2026.7.18</span><span class="big">1,140<small>억 원</small></span><span class="cap">재산 피해. 소방청은 적재품에 든 리튬이온배터리의 열폭주를 최초 발화 원인으로 봤습니다.</span><span class="src">증거 자료 · <a href="https://nocutnews.co.kr/news/6598909" target="_blank" rel="noopener">노컷뉴스 ↗</a> <a href="https://supple.kr/news/cmvt2e9z3fkm6m5vuspwnvmzf" target="_blank" rel="noopener">연합뉴스 전재 ↗</a></span></div>
+  </div>
+
+  <div class="card">
+    <h3>후보 공간 3곳 비교 · 기준은 탈락 기록에서 얻은 통과 조건</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th style="min-width:150px">기준</th><th style="min-width:180px">배터리 거점수거센터 <span class="muted">(건주)</span></th><th class="pick" style="min-width:180px">1층 작업장 <span class="muted">(채웅)</span> · 제안</th><th style="min-width:180px">공동구 <span class="muted">(명수)</span></th></tr></thead>
+        <tbody id="matrix"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="callout warn">
+      <h3>주의 · 방향이 바뀌는 유도등은 이미 있습니다</h3>
+      <p>"지능형 피난유도 시스템"은 감지기와 수신기를 연동해 화재 반대 방향으로 유도등을 돌립니다. 그래서 "고정 유도등은 방향을 못 바꾼다"만 내세우면 반박당할 수 있습니다. 직접 비교해 보려면 <a href="#emergency" data-jump="emergency">4 · 비상시 동작</a> 탭에서 "지능형 유도등"을 눌러 보세요.</p>
+    </div>
+    <div class="callout">
+      <h3>그래서 차별점은 이 세 가지로</h3>
+      <ul>
+        <li><b>통로 막힘을 안다.</b> 천장 감지기는 불 위치만 압니다. 메카독은 평소에 직접 걸어 봐서 막힌 길을 알고, 안내할 때 그 길을 뺍니다.</li>
+        <li><b>바닥 높이에서 안내한다.</b> 유도등은 천장 가까이 있어 연기에 먼저 가려집니다. 바닥은 연기가 마지막에 차는 곳입니다.</li>
+        <li><b>설비를 바꾸지 않아도 된다.</b> 지능형 유도등은 배선을 새로 깔아야 합니다. 설치비 비교 자료는 확인이 필요합니다.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="sources">출처:
+    <a href="https://www.newsis.com/view/NISX20240624_0002784984" target="_blank" rel="noopener">뉴시스 아리셀 15초</a>
+    <a href="https://www.khan.co.kr/article/202406272101015" target="_blank" rel="noopener">경향신문 아리셀</a>
+    <a href="https://www.koreatimes.co.kr/southkorea/20260421/instinct-to-flee-fire-can-be-fatal-officials-warn" target="_blank" rel="noopener">Korea Times 39%</a>
+    <a href="https://www.khan.co.kr/article/201808051456001" target="_blank" rel="noopener">경향신문 2018 점검</a>
+    <a href="https://nocutnews.co.kr/news/6598909" target="_blank" rel="noopener">노컷뉴스 쿠팡</a>
+    <a href="https://www.kfsi.or.kr/contents/webzine/202212/sub02-02.html" target="_blank" rel="noopener">소방산업기술원 물류 피난</a>
+    <a href="https://www.kbmaeil.com/article/20260611500252" target="_blank" rel="noopener">경북매일 폐배터리 41건</a>
+    <a href="https://zdnet.co.kr/view/?no=20210428091919" target="_blank" rel="noopener">지디넷 공동구 로봇</a>
+    <a href="https://dealsite.co.kr/articles/156222" target="_blank" rel="noopener">딜사이트 서울 공동구</a>
+    <a href="https://koreascience.kr/article/CFKO200814064134310.pdf" target="_blank" rel="noopener">지능형 유도 논문</a>
+  </div>
+</section>
+
+<!-- 2. 평시 역할 -->
+<section class="panel" id="p-roles" role="tabpanel" hidden>
+  <div class="sec-head">
+    <div class="eyebrow">2 · 평시 역할 A~D</div>
+    <h2>A~D는 로봇 이름이 아니라 역할 이름</h2>
+    <p>위에서부터 A 보관동, B 간선, C 작업장을 순찰하고, D는 도크에서 충전하며 기다립니다. 메카독은 배터리를 갈아 끼우는 방식이 아니라 계속 돌 수 없으므로, 4대가 밀어내기식으로 돌아가며 D를 맡습니다. 건주 안(역할별)과 예은 안(구역별)을 합쳤습니다. 대피로는 가운데 간선(실선)과 구역마다 둘레·사이 통로(점선)로 나눴습니다. 로봇을 누르면 맵에 그 로봇의 순찰 경로와 점검 대상이 표시됩니다.</p>
+  </div>
+  <div class="robots" id="roleBtns"></div>
+  <div class="two">
+    <div class="map"><div id="mapRoles"></div>
+      <div class="legend"><span><i style="background:var(--route)"></i>순찰 경로 (굵게)</span><span><i style="background:none;border:2px dashed var(--route)"></i>지선 · 구역 둘레와 사이 통로</span><span><i style="background:var(--robot)"></i>메카독</span><span><i style="background:var(--crit)"></i>점검 대상</span><span><i style="background:var(--rack);opacity:.5"></i>보관 랙</span></div>
+    </div>
+    <div class="card" id="roleDetail"></div>
+  </div>
+  <div class="card">
+    <h3>D는 돌아가며 맡는다 · 밀어내기식 교대</h3>
+    <div class="scroll"><svg viewBox="0 0 760 170" style="min-width:600px;display:block;width:100%;height:auto" role="img" aria-label="교대 예시: 순찰 로봇 배터리가 떨어지면 도크로 돌아와 D가 되고, 충전된 D가 그 순찰 길로 나간다">
+      <g font-family="var(--font-sans)">
+        <g>
+          <text x="95" y="20" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--muted)">① 평소</text>
+          <rect x="20" y="32" width="150" height="120" rx="8" fill="var(--floor2)"/>
+          <circle cx="50" cy="62" r="13" fill="var(--robot)"/><text x="50" y="67" text-anchor="middle" font-size="12" font-weight="700" fill="var(--robot-ink)">1</text><text x="70" y="67" font-size="12" fill="var(--ink)">A 보관동 순찰</text>
+          <circle cx="50" cy="92" r="13" fill="var(--robot)"/><text x="50" y="97" text-anchor="middle" font-size="12" font-weight="700" fill="var(--robot-ink)">2</text><text x="70" y="97" font-size="12" fill="var(--ink)">B 간선 순찰</text>
+          <circle cx="50" cy="122" r="13" fill="var(--robot)"/><text x="50" y="127" text-anchor="middle" font-size="12" font-weight="700" fill="var(--robot-ink)">3</text><text x="70" y="127" font-size="12" fill="var(--ink)">C 작업장 순찰</text>
+        </g>
+        <rect x="20" y="158" width="150" height="0" fill="none"/>
+        <g>
+          <text x="285" y="20" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--warn)">② 1번 배터리 부족</text>
+          <rect x="210" y="32" width="150" height="120" rx="8" fill="var(--warn-bg)"/>
+          <circle cx="240" cy="62" r="13" fill="var(--warn)"/><text x="240" y="67" text-anchor="middle" font-size="12" font-weight="700" fill="var(--surface)">1</text><text x="260" y="67" font-size="12" fill="var(--ink)">도크로 복귀</text>
+          <circle cx="240" cy="122" r="13" fill="var(--ok)"/><text x="240" y="127" text-anchor="middle" font-size="12" font-weight="700" fill="var(--surface)">4</text><text x="260" y="127" font-size="12" fill="var(--ink)">완충 · 출동</text>
+          <path d="M240 108 V80" stroke="var(--ok)" stroke-width="3" marker-end="url(#rotArr)"/>
+        </g>
+        <g>
+          <text x="475" y="20" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ok)">③ 역할만 바뀜</text>
+          <rect x="400" y="32" width="150" height="120" rx="8" fill="var(--floor2)"/>
+          <circle cx="430" cy="62" r="13" fill="var(--robot)"/><text x="430" y="67" text-anchor="middle" font-size="12" font-weight="700" fill="var(--robot-ink)">4</text><text x="450" y="67" font-size="12" fill="var(--ink)">A 보관동 순찰</text>
+          <circle cx="430" cy="92" r="13" fill="var(--robot)"/><text x="430" y="97" text-anchor="middle" font-size="12" font-weight="700" fill="var(--robot-ink)">2</text><text x="450" y="97" font-size="12" fill="var(--ink)">B 간선 순찰</text>
+          <circle cx="430" cy="122" r="13" fill="var(--robot)"/><text x="430" y="127" text-anchor="middle" font-size="12" font-weight="700" fill="var(--robot-ink)">3</text><text x="450" y="127" font-size="12" fill="var(--ink)">C 작업장 순찰</text>
+        </g>
+        <g>
+          <text x="665" y="20" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--muted)">D 자리 (도크)</text>
+          <rect x="590" y="32" width="150" height="120" rx="8" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
+          <text x="665" y="62" text-anchor="middle" font-size="12" fill="var(--muted)">① 때: 4번이 D</text>
+          <text x="665" y="92" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">③ 때: 1번이 D</text>
+          <text x="665" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)">충전하며 재확인·비상 대기</text>
+        </g>
+        <path d="M172 92 H206" stroke="var(--muted)" stroke-width="2" marker-end="url(#rotArr2)"/>
+        <path d="M362 92 H396" stroke="var(--muted)" stroke-width="2" marker-end="url(#rotArr2)"/>
+        <defs>
+          <marker id="rotArr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="var(--ok)"/></marker>
+          <marker id="rotArr2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="var(--muted)"/></marker>
+        </defs>
+      </g>
+    </svg></div>
+    <p class="muted" style="font-size:13px">숫자 1~4는 실제 로봇, A~D는 역할입니다. 배터리가 떨어진 로봇은 도크로 들어와 D가 되고, 그동안 충전된 로봇이 밀려 나가 빈 순찰 역할을 이어받습니다. 시연에서도 실제로 교대합니다. 재생 0:39에 C(3번)가 배터리 부족으로 들어오고, 0:44에 D(4번)가 나가 C를 이어받습니다.</p>
+    <div class="callout" style="margin-top:12px">
+      <h3>왜 이렇게 했나 · "4대 중 1대는 놀고 있는 거 아니야?"</h3>
+      <p class="muted" style="font-size:13.5px">처음에는 D를 로봇 한 대에 고정했습니다. 그러면 평소에는 다른 로봇이 이상을 알릴 때만 움직이니 "노는 로봇"처럼 보입니다. 멘토나 심사에서 바로 나올 질문이라 구조를 바꿨습니다.</p>
+      <div class="scroll"><table style="margin-top:4px">
+        <tbody>
+          <tr><th style="min-width:120px">배터리는 무한이 아니다</th><td>메카독은 배터리를 갈아 끼우는 방식이 아니라 충전해야 합니다. 4대가 다 계속 순찰하면 언젠가 여러 대가 한꺼번에 충전하러 빠지고, 그동안 순찰이 비게 됩니다. 기존 기획 페이지의 비교표에도 "배터리 교대 운용 필요"가 적혀 있었습니다.</td></tr>
+          <tr><th>그래서 교대를 미리 짠다</th><td>항상 1대는 도크에서 충전하고, 배터리가 떨어진 로봇이 들어오면 충전된 로봇이 밀려 나가 그 순찰을 이어받습니다. 고정된 한 대가 노는 게 아니라 4대가 모두 "순찰 → 충전"을 돌아가며 합니다.</td></tr>
+          <tr><th>충전하는 동안에도 일한다</th><td>D 자리에 있는 로봇은 다른 로봇이 이상을 알리면 가서 다시 재고 확정합니다(오탐 줄이기). 불이 나면 1안은 간선 합류점(CP7)에서 안내하고, 2안은 남은 사람을 찾습니다.</td></tr>
+          <tr><th>비상시에 유리하다</th><td>D는 늘 가장 오래 충전한 로봇이라, 불이 났을 때 배터리 걱정 없이 바로 출동할 수 있습니다.</td></tr>
+          <tr><th>다른 방법과 비교</th><td>예은 안처럼 4대 모두 구역을 주면 평소엔 다 움직이지만, 충전할 틈이 없어 결국 순찰이 끊기는 시간이 생기고, 비상시 바로 나갈 로봇도 없습니다.</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:13.5px"><b>한 줄 답변:</b> "노는 로봇이 아니라 충전 차례인 로봇이에요. 배터리라서 4대가 돌아가며 충전해야 하는데, 그 충전 시간에도 재확인과 비상 대기를 맡깁니다."</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 트리거 -->
+<section class="panel" id="p-triggers" role="tabpanel" hidden>
+  <div class="sec-head">
+    <div class="eyebrow">3 · 트리거</div>
+    <h2>이상 징후를 무엇으로 감지하나</h2>
+    <p>카메라가 바닥에서 약 15~17 cm 높이에 있어서, 미션맵의 표식은 모두 30 cm 아래에 둬야 합니다. 비전 모듈은 색 인식을 중심으로 하므로 "외관 손상"은 색 마커로 바꿔 보여 줍니다. 바닥에는 초록 테이프(길)와 다른 색 테이프(체크포인트)를 붙여서, 로봇이 길을 따라 걷고 지금 몇 번 CP를 지났는지 알게 합니다.</p>
+  </div>
+  <div class="specs">
+    <div class="spec"><span class="eyebrow">서 있을 때 크기</span><span class="v">269×126×174 mm</span><span class="d">MechDog AI 기준, 711 g. 카메라 높이 15~17 cm는 추정이라 실측이 필요합니다.</span></div>
+    <div class="spec"><span class="eyebrow">초음파</span><span class="v">2–400 cm</span><span class="d">I2C, RGB 발광. 앞쪽 거리만 재므로 옆 랙까지의 거리는 몸을 돌려서 잽니다.</span></div>
+    <div class="spec"><span class="eyebrow">비전 모듈</span><span class="v">ESP32-S3</span><span class="d">색 인식, 얼굴 인식, 라인 추적, Wi-Fi 영상 전송을 지원합니다. 라인 추적을 하려면 고개를 숙여 바닥 가까이를 봐야 하는데, 그때 앞쪽 표식도 함께 보이는지 실측이 필요합니다.</span></div>
+  </div>
+  <div class="map">
+    <div id="sideView"></div>
+  </div>
+  <div class="card">
+    <div class="controls" style="justify-content:space-between">
+      <h3>역할별 트리거</h3>
+      <div class="filters" id="trigFilters"></div>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>역할</th><th style="min-width:130px">이상 징후</th><th>감지</th><th style="min-width:200px">판정 기준 <span class="muted">(초안, 실측 후 조정)</span></th><th style="min-width:180px">시연용 모의</th></tr></thead>
+        <tbody id="trigBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:13px">온도나 가스 같은 모의 센서는 로봇에 달지 않고 노트북 버튼 신호로 대신하는 쪽을 권합니다. 감지는 기존 설비가 하고, 판단과 안내는 로봇이 한다는 기존 원칙과 맞습니다.</p>
+  </div>
+  <div class="sources">출처:
+    <a href="https://www.robotshop.com/products/hiwonder-mechdog-hiwonder-open-source-ai-robot-dog-with-esp32-controller-high-speed-coreless-servos-support-scratch-arduino-and-python-advanced-kit" target="_blank" rel="noopener">RobotShop MechDog Advanced</a>
+    <a href="https://www.cnx-software.com/2024/08/08/mechdog-ai-robot-dog-features-esp32-s3-controller-supports-scratch-python-and-arduino-programming/" target="_blank" rel="noopener">CNX Software</a>
+    <a href="https://ca.robotshop.com/products/hiwonder-esp32-s3-ai-vision-module-support-wifi-video-transmission-face-and-color-recognition-dual-mode-network-communication" target="_blank" rel="noopener">ESP32-S3 비전 모듈</a>
+    <a href="https://docs.hiwonder.com/projects/MechDog/en/latest/docs/1.Getting_Ready.html" target="_blank" rel="noopener">Hiwonder 문서</a>
+  </div>
+</section>
+
+<!-- 4. 비상시 -->
+<section class="panel" id="p-emergency" role="tabpanel" hidden>
+  <div class="sec-head">
+    <div class="eyebrow">4 · 비상시 동작</div>
+    <h2>1안과 2안, 그리고 유도등과 비교</h2>
+    <p>맨 위 버튼으로 1안과 2안을 바꿔 보세요. 1안은 4대가 모두 사각지대와 간선 합류점에 서서 방향을 안내합니다. 2안은 3대가 안내하고 D 1대는 처음부터 남은 사람을 찾습니다. 불 위치와 통로 막힘을 바꿔 보세요. 고정 유도등은 사람을 불 쪽으로 보내고, 지능형 유도등은 막힌 길로 보냅니다. 메카독은 평소 점검으로 막힌 길을 알기 때문에 둘레 길로 돌아가게 안내합니다.</p>
+  </div>
+  <div class="controls">
+    <div><span class="lab">안</span><span class="seg" id="segPlan"><button type="button" data-v="1" aria-pressed="true">1안 · 4대 모두 안내</button><button type="button" data-v="2" aria-pressed="false">2안 · 안내 3대 + 수색 1대</button></span></div>
+  </div>
+  <div class="controls">
+    <div><span class="lab">불 위치</span><span class="seg" id="segFire"><button type="button" data-v="west" aria-pressed="true">서쪽 · 비상구 1</button><button type="button" data-v="east" aria-pressed="false">동쪽 · 비상구 2</button></span></div>
+    <div><span class="lab">안내 방식</span><span class="seg" id="segMode"><button type="button" data-v="fixed" aria-pressed="false">고정 유도등</button><button type="button" data-v="smart" aria-pressed="false">지능형 유도등</button><button type="button" data-v="mecha" aria-pressed="true">메카독</button></span></div>
+    <div><span class="lab">평소 발견된 막힘</span>
+      <label class="toggle"><input type="checkbox" id="obC1"> CP6~CP7 사이</label>
+      <label class="toggle" style="margin-left:10px"><input type="checkbox" id="obC2" checked> CP7~CP8 사이</label>
+    </div>
+  </div>
+  <div class="two">
+    <div class="map"><div id="mapEmer"></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>안전한 대피 경로</span><span><i style="background:var(--crit)"></i>위험한 안내</span><span><i style="background:var(--box)"></i>적치물</span><span><i style="background:var(--robot)"></i>메카독</span><span><i style="background:none;border:2px dashed var(--signal);border-radius:50%"></i>사각지대 지점 (랙·라인에 가려 유도등이 잘 안 보임)</span></div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3 id="emerTitle">사각지대 지점별 안내 결과</h3>
+        <div class="verdicts" id="verdicts"></div>
+        <div class="voice" id="voice"></div>
+      </div>
+      <div class="card">
+        <h3>로봇이 방향을 보여 주는 방법</h3>
+        <div class="scroll"><table>
+          <tbody>
+            <tr><td><b>화살표 / X</b></td><td>LED 도트매트릭스 · → ← ↑ / X, 꺾이는 길은 ↱ ↳ 처럼 다음 방향까지 <span class="cellnote">작아서 1~2 m 밖에서 보이는지 확인 필요. 꺾인 화살표는 매트릭스에 그려지는지도 확인 필요</span></td></tr>
+            <tr><td><b>몸 방향</b></td><td><s>비상구 쪽으로 몸을 돌려 서서 가리킴</s> <span class="cellnote">빼는 쪽으로. 직접 해 보니 제자리에서 잘 안 꺾이고 크게 돌아서, 사각지대 자리에서 방향을 맞추기 어려움. 화살표·색·음성으로 안내</span></td></tr>
+            <tr><td><b>색</b></td><td>초음파 RGB · 초록은 이쪽, 빨강은 금지</td></tr>
+            <tr><td><b>음성</b></td><td>MP3 모듈 · 소방산업기술원이 권하는 음성과 빛 병용과 맞음</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h3>팀원에게 물어볼 것 · 1안 vs 2안</h3>
+        <div class="scroll"><table id="planTable">
+          <thead><tr><th></th><th data-col="1">1안 · 4대 모두 안내</th><th data-col="2">2안 · 안내 3 + 수색 1</th></tr></thead>
+          <tbody>
+            <tr><th>불 났을 때</th><td data-col="1">A·B는 랙 사이 출구, D는 간선 합류점, C는 작업장 서쪽 끝에서 화살표·음성. D의 꺾인 화살표(예: ↳)가 라인 사이 출구까지 안내</td><td data-col="2">A·B·C는 사각지대 3곳에서 안내, D는 도크에서 바로 수색 출동</td></tr>
+            <tr><th>남은 사람</th><td data-col="1"><span class="pill warn">확인 못 함</span><span class="cellnote">대피가 끝났는지 아무도 모름</span></td><td data-col="2"><span class="pill ok">D가 찾음</span><span class="cellnote">발견 위치를 관제 화면(되면 폰)에 표시</span></td></tr>
+            <tr><th>안내 지점</th><td data-col="1"><span class="pill ok">4곳</span><span class="cellnote">간선 합류점과 작업장 서쪽 끝까지 커버</span></td><td data-col="2"><span class="pill warn">3곳</span><span class="cellnote">간선 가운데는 고정 유도등에 맡김</span></td></tr>
+            <tr><th>구현 부담</th><td data-col="1"><span class="pill ok">키트 기능만</span><span class="cellnote">라인 추적, 색 마커, 화살표, 음성, Wi-Fi</span></td><td data-col="2"><span class="pill warn">조금 더</span><span class="cellnote">색 밴드 인식 + 발견 메시지 + 화면 핀 추가</span></td></tr>
+            <tr><th>시연 볼거리</th><td data-col="1">4대가 동시에 같은 방향을 가리키는 장면</td><td data-col="2">숨은 팀원을 찾아내고 화면에 핀이 뜨는 장면</td></tr>
+            <tr><th>D의 평소 역할</th><td data-col="1">재확인 (도크 대기 후 출동)</td><td data-col="2">재확인 (도크 대기 후 출동) · 똑같음</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" id="gps">
+    <div class="eyebrow">2안 조사 결과</div>
+    <h3 style="font-size:17px">알아보니 GPS는 안 됩니다. 대신 이렇게 대처합니다</h3>
+    <div class="two" style="margin-top:12px">
+      <div class="stack">
+        <div class="callout warn">
+          <h3>GPS가 안 되는 이유</h3>
+          <ul>
+            <li><b>메카독에 GPS가 없습니다.</b> 키트에 들어 있는 건 ESP32-S3 카메라, 초음파, Wi-Fi 정도입니다.</li>
+            <li><b>달아도 실내에서는 거의 안 잡힙니다.</b> GPS는 위성 신호라 지붕 아래에서는 오차가 수십 m가 되거나 아예 안 잡힙니다. 5 m × 5 m 미션맵 안에서는 쓸 수 없습니다.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>대처 · 위치 = "지난 체크포인트와 다음 체크포인트 사이"</h3>
+          <p class="muted" style="font-size:13.5px;margin-top:4px">관제 화면에서 쓰는 방법을 그대로 씁니다. 바닥 색 마커(CP)를 지날 때마다 기록해 두었다가, 사람을 찾으면 "CP11은 지났고 CP12는 아직 → CP11과 CP12 사이, 작업장 B2 앞"처럼 알려 줍니다.</p>
+        </div>
+        <ol style="margin:0;padding:0;list-style:none;display:grid;gap:6px">
+          <li class="rcard" style="grid-template-columns:30px minmax(0,1fr)"><span class="tag">1</span><div><div class="nm">분홍 밴드를 보면 멈춤</div><div class="st">숨은 팀원 다리에 분홍 밴드. 키트 기본 색 인식으로 찾음</div></div></li>
+          <li class="rcard" style="grid-template-columns:30px minmax(0,1fr)"><span class="tag">2</span><div><div class="nm">그 자리에서 삐 소리 + 빨간 불</div><div class="st">MP3 모듈과 초음파 RGB로 위치를 현장에 표시</div></div></li>
+          <li class="rcard" style="grid-template-columns:30px minmax(0,1fr)"><span class="tag">3</span><div><div class="nm">"CP11~CP12 사이 발견"을 Wi-Fi로 노트북에 보냄</div><div class="st">관제 화면용으로 어차피 만드는 통신에 메시지 하나 추가</div></div></li>
+          <li class="rcard" style="grid-template-columns:30px minmax(0,1fr)"><span class="tag">4</span><div><div class="nm">노트북 관제 화면 + 폰에 빨간 핀</div><div class="st">폰은 같은 공유기에 붙여 관제 페이지를 브라우저로 열어 둠</div></div></li>
+        </ol>
+      </div>
+      <div style="display:grid;justify-items:center;gap:8px;align-content:start">
+        <div style="width:220px;max-width:100%;border:8px solid var(--ink);border-radius:30px;background:var(--surface);padding:12px 10px 16px;display:grid;gap:8px">
+          <div class="mono" style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted)"><span>2:51</span><span>관제 페이지</span></div>
+          <div style="background:var(--crit);color:var(--surface);border-radius:10px;padding:8px 10px;font-size:12.5px;font-weight:600;line-height:1.4">요구조자 1명 발견<br><span style="font-weight:400">작업장 B2 앞 · CP11~CP12 사이</span></div>
+          <svg viewBox="0 0 600 410" style="width:100%;height:auto;display:block;border-radius:6px" role="img" aria-label="폰 화면 맵: 작업장 B2 앞에 빨간 핀">
+            <rect x="0" y="0" width="600" height="410" fill="var(--floor)"/>
+            <path d="M20 200 V20 H580 V200 M580 240 V395 H20 V240" fill="none" stroke="var(--wall)" stroke-width="8"/>
+            <rect x="60" y="60" width="135" height="120" rx="6" fill="var(--rack)" fill-opacity=".3"/><rect x="235" y="60" width="130" height="120" rx="6" fill="var(--rack)" fill-opacity=".3"/><rect x="405" y="60" width="135" height="120" rx="6" fill="var(--rack)" fill-opacity=".3"/>
+            <line x1="20" y1="220" x2="580" y2="220" stroke="var(--route)" stroke-width="8"/>
+            <rect x="60" y="250" width="220" height="70" rx="6" fill="var(--floor2)"/><rect x="320" y="250" width="220" height="70" rx="6" fill="var(--crit-bg)" stroke="var(--crit)" stroke-width="4"/>
+            <rect x="289" y="329" width="22" height="22" rx="3" fill="var(--tape-blue)" stroke="var(--ink)" stroke-opacity=".5" stroke-width="2"/><text x="250" y="384" font-size="30" font-weight="700" font-family="var(--font-mono)" fill="var(--ink)">CP11</text><rect x="549" y="329" width="22" height="22" rx="3" fill="var(--tape-yellow)" stroke="var(--ink)" stroke-opacity=".5" stroke-width="2"/><text x="470" y="384" font-size="30" font-weight="700" font-family="var(--font-mono)" fill="var(--ink)">CP12</text><line x1="320" y1="340" x2="545" y2="340" stroke="var(--crit)" stroke-width="6" stroke-dasharray="14 10"/>
+            <circle cx="470" cy="327" r="34" fill="var(--crit)" opacity=".25"/>
+            <path d="M470 335 C455 312 446 300 446 288 A24 24 0 1 1 494 288 C494 300 485 312 470 335 Z" fill="var(--crit)"/><circle cx="470" cy="288" r="9" fill="var(--surface)"/>
+            <rect x="14" y="200" width="12" height="40" fill="var(--crit)"/><rect x="574" y="200" width="12" height="40" fill="var(--ok)"/>
+          </svg>
+          <div style="font-size:11.5px;color:var(--muted);text-align:center">D · 1명 발견 · 2:51</div>
+        </div>
+        <span class="muted" style="font-size:12px">폰 화면 예시 (관제 페이지를 폰으로 연 모습)</span>
+      </div>
+    </div>
+
+    <div class="two" style="margin-top:16px">
+      <div>
+        <h3>시연에서 할 것 / 뺄 것</h3>
+        <div class="scroll"><table style="margin-top:6px">
+          <thead><tr><th>할 것</th><th>뺄 것</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill ok">할 것</span> 색 밴드 인식</td><td><span class="pill idle">뺄 것</span> 진짜 사람(다리) 인식 <span class="cellnote">비전 모듈은 색 인식이 기본이라 따로 학습이 필요함</span></td></tr>
+            <tr><td><span class="pill ok">할 것</span> 멈춤 + 소리 + 불빛</td><td><span class="pill idle">뺄 것</span> 사진 전송 <span class="cellnote">4대가 Wi-Fi를 같이 쓸 때 안정적일지 모름</span></td></tr>
+            <tr><td><span class="pill ok">할 것</span> 위치 = 지난 CP와 다음 CP 사이</td><td><span class="pill idle">뺄 것</span> GPS</td></tr>
+            <tr><td><span class="pill ok">할 것</span> 관제 페이지를 폰으로 열어 핀 표시</td><td><span class="pill idle">뺄 것</span> 진짜 푸시 알림 <span class="cellnote">시연장 인터넷이 확실하면 그때 추가</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div>
+        <h3>폰으로 보내는 방법 3가지</h3>
+        <div class="scroll"><table style="margin-top:6px">
+          <tbody>
+            <tr><td><span class="pill ok">추천</span></td><td><b>관제 웹페이지를 폰으로 열기</b><span class="cellnote">인터넷이 필요 없고 만들 화면이 하나라 제일 쉬움. 대신 잠금화면 알림은 안 뜸</span></td></tr>
+            <tr><td><span class="pill warn">조건부</span></td><td><b>푸시 알림 서비스</b> (텔레그램 봇, ntfy 등)<span class="cellnote">청중 앞에서 폰이 "띵" 울려서 임팩트가 큼. 시연장 인터넷이 필요함</span></td></tr>
+            <tr><td><span class="pill idle">확인 필요</span></td><td><b>키트 IoT 기능</b><span class="cellnote">Hiwonder 문서에 IoT 확장 강의가 있지만 폰 알림까지 되는지 모름</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:16px">
+      <h3>그래서 2안은 "되면 넣는 기능"으로</h3>
+      <p>기본 기능(순찰, 막힘 감지, 화살표·음성, 화재 신호)과 관제 화면이 먼저 돌아가야 합니다. 1안은 이 기본 기능만으로 됩니다. 2안 수색은 관제 화면 통신을 그대로 쓰므로 그다음에 붙이면 추가 작업이 작습니다. 회의에서 "시연 1주 전까지 기본 기능과 관제 화면이 다 되면 2안 수색 시작"처럼 마감을 정해 두면 좋습니다.</p>
+      <p class="muted" style="font-size:13px">확인 필요: 시연장 인터넷 사용 가능 여부, ESP32-S3가 Wi-Fi로 메시지와 사진을 안정적으로 보내는지, 키트 IoT 강의가 폰 알림을 지원하는지</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 관제 -->
+<section class="panel" id="p-control" role="tabpanel" hidden>
+  <div class="sec-head">
+    <div class="eyebrow">5 · 관제 화면</div>
+    <h2>관제 화면은 4단계로 쌓아서 만듭니다</h2>
+    <p>한 번에 보면 복잡하니까 지도 위에 한 겹씩 더해 가며 봅니다. 버튼을 1단계부터 차례로 누르면 화면에 무엇이 더해지는지 보이고, 마지막 "다 합치면"이 실제 관제 화면입니다. 움직이는 모습은 <a href="#demo" data-jump="demo">6 · 시연</a> 탭에서 재생할 수 있습니다.</p>
+  </div>
+  <div class="filters" id="ctlSteps" role="group" aria-label="관제 화면 단계"></div>
+  <div class="two">
+    <div class="map"><div id="mapCtlStatic"></div><div class="legend" id="ctlLegend"></div></div>
+    <div class="card" id="ctlText"></div>
+  </div>
+  <div>
+    <div class="card">
+      <h3>구현 메모</h3>
+      <dl class="kv">
+        <dt>화면</dt><dd>노트북에서 웹 페이지 하나</dd>
+        <dt>통신</dt><dd>로봇 4대와 노트북이 같은 공유기에 붙어 메시지를 주고받음. MQTT와 HTTP 중 선택 <span class="cellnote">확인 필요: 키트 IoT 예제가 쓰는 방식</span></dd>
+        <dt>보내는 내용</dt><dd>CP 통과, 이상 감지(종류·값), 현재 상태, 화살표 방향, (2안) 요구조자 발견 위치</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 시연 -->
+<section class="panel" id="p-demo" role="tabpanel" hidden>
+  <div class="sec-head">
+    <div class="eyebrow">6 · 시연 시나리오</div>
+    <h2>3분 30초 · 장면 7개</h2>
+    <p>재생을 누르면 3분 30초 시연이 관제 화면으로 흘러갑니다. 위 막대나 표의 "이 장면 보기"를 누르면 그 장면으로 건너뜁니다. 손상 배터리와 발화 지점은 하나로 묶었습니다. 1:40에 A가 서쪽 A1 랙에서 찾은 손상 배터리가 2:00에 열폭주해 불이 나는 흐름입니다. 기존 기획 대본의 "동쪽 화재로 다시 하기" 장면은 시간이 모자라 뺐습니다.</p>
+    <p class="muted" style="font-size:13.5px">로봇 머리 위 작은 숫자는 실제 로봇 번호(1~4), 큰 글자는 역할(A~D)입니다. 0:39에 3번과 4번이 교대해 역할이 바뀝니다. 재생은 <b style="color:var(--ink)">2안 기준</b>입니다(A·B·C 안내, D 수색). 1안으로 정하면 6번 장면을 빼고, 불이 났을 때 D가 CP7에서 안내하고 C가 CP10으로 갑니다. 1안 배치는 <a href="#emergency" data-jump="emergency">4 · 비상시 동작</a> 탭에서 볼 수 있습니다.</p>
+  </div>
+  <div>
+    <div class="tl" id="timeline"></div>
+    <div class="tl-scale"><span>0:00</span><span>1:00</span><span>2:00</span><span>3:00</span><span>3:30</span></div>
+  </div>
+  <div class="stack" style="gap:12px">
+  <div class="player" id="player">
+    <button type="button" class="pbtn" id="playBtn">재생</button>
+    <span class="seg" id="segSpeed"><button type="button" data-v="1" aria-pressed="false">1×</button><button type="button" data-v="2" aria-pressed="false">2×</button><button type="button" data-v="4" aria-pressed="true">4×</button></span>
+    <span class="clock" id="clock">0:00</span>
+    <input type="range" class="scrub" id="scrub" min="0" max="210" step="0.5" value="0" aria-label="시연 시간">
+    <span class="scene-now" id="sceneNow"></span>
+  </div>
+  <div class="console">
+    <div class="map"><div id="mapCtl"></div>
+      <div class="legend"><span><i style="background:var(--ok-bg);border:1px solid var(--ok)"></i>정상 · 통과 확인 (구간·구역)</span><span><i style="background:var(--warn-bg);border:1px solid var(--warn)"></i>미확정</span><span><i style="background:var(--crit-bg);border:1px solid var(--crit)"></i>확정 · 조치 필요</span><span><i style="background:var(--floor2)"></i>미점검</span><span><i style="background:var(--person);border-radius:50%"></i>작업자 (사람)</span></div>
+    </div>
+    <div class="side">
+      <div id="rcards" style="display:grid;gap:6px"></div>
+      <div class="exits" id="exits"></div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:6px">화재 수신기 신호 (노트북 버튼)</div>
+        <div class="firebtns"><div class="firebtn" id="fbW">서쪽 화재</div><div class="firebtn" id="fbE">동쪽 화재</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="log" id="log"><ol></ol></div>
+  </div>
+  <div class="card">
+    <div class="scroll"><table class="scenes">
+      <thead><tr><th>시간</th><th style="min-width:110px">장면</th><th style="min-width:180px">로봇</th><th style="min-width:180px">사람 · 화면</th><th style="min-width:150px">보여 줄 것</th><th></th></tr></thead>
+      <tbody id="sceneBody"></tbody>
+    </table></div>
+  </div>
+  <div class="card" id="tapeDemo">
+    <div class="controls" style="justify-content:space-between">
+      <h3>바닥 테이프 붙이는 법 · 간선 예시 (CP5 → CP9)</h3>
+      <div class="controls"><label class="toggle"><input type="checkbox" id="tapeMiss"> CP7 마커를 놓쳤다면?</label><button type="button" class="pbtn" id="tapePlay">재생</button></div>
+    </div>
+    <p class="muted" style="font-size:13.5px">초록 길은 끊지 않고, 체크포인트 자리에만 다른 색 테이프를 길을 가로질러 붙입니다. 로봇은 발밑 색(노랑·파랑)만 보내고, 몇 번 CP인지는 노트북이 맞힙니다. <b style="color:var(--ink)">순찰하는 줄마다 노랑과 파랑을 번갈아</b> 붙여서, 줄을 따라 걸으면 노·파가 번갈아 나와야 합니다. 같은 색이 두 번 연속 나오면 그 사이 마커 하나를 놓친 것이라 바로 알아챕니다.</p>
+    <div class="map" style="padding:6px"><div class="scroll"><svg id="tapeSvg" viewBox="0 0 720 210" style="min-width:600px;display:block;width:100%;height:auto" role="img" aria-label="초록 길을 가로질러 붙인 체크포인트 테이프 위를 로봇이 지나가며 색을 읽는 모습"></svg></div></div>
+    <div class="two" style="margin-top:10px">
+      <div class="stack" style="gap:8px">
+        <div class="eyebrow">로봇 카메라가 보는 발밑 색</div>
+        <div id="tapeCam" style="display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)"></div>
+        <dl class="kv" style="font-size:13px">
+          <dt>초록 테이프</dt><dd>5 cm 폭 · 끊지 않고 이어 붙임 (따라 걷는 길)</dd>
+          <dt>CP 테이프</dt><dd>5 cm × 약 20 cm · 길을 가로질러 붙임. 로봇 폭(약 13 cm)보다 길어야 놓치지 않음</dd>
+          <dt>노랑 7곳</dt><dd>CP1·3·5·7·9·10·12</dd>
+          <dt>파랑 5곳</dt><dd>CP2·4·6·8·11. 순찰 줄마다 노·파가 번갈아 나오므로, 같은 색이 연속이면 마커를 놓친 것. 도크 앞 CP11만 파랑이라 "출발"의 첫 글자가 됨</dd>
+          <dt>색 정리</dt><dd>초록 길 · 노랑/파랑 CP · 빨강 손상·경고등 · 분홍 요구조자 · 검정 소화기 자리. 아래 색 표 참고</dd>
+        </dl>
+      </div>
+      <div class="stack" style="gap:8px">
+        <div class="eyebrow">노트북 기록</div>
+        <div class="log" style="max-height:none"><ol id="tapeLog"></ol></div>
+      </div>
+    </div>
+    <div style="margin-top:10px"><div class="eyebrow">미션맵 색 정리 · 서로 겹치지 않게</div>
+      <div class="scroll"><table style="margin-top:4px"><thead><tr><th>색</th><th>쓰는 곳</th><th>누가 봄</th><th>헷갈릴 수 있는 색</th></tr></thead><tbody>
+        <tr><td><span class="pill" style="background:var(--tape-green);color:#fff">초록</span></td><td>길 (테이프)</td><td>전원 · 라인 추적</td><td>—</td></tr>
+        <tr><td><span class="pill" style="background:var(--tape-yellow);color:#1c2220">노랑</span></td><td>CP 7곳</td><td>전원</td><td>주황 → 그래서 주황은 안 씀</td></tr>
+        <tr><td><span class="pill" style="background:var(--tape-blue);color:#fff">파랑</span></td><td>CP 5곳</td><td>전원</td><td>보라 → 그래서 보라는 안 씀</td></tr>
+        <tr><td><span class="pill" style="background:var(--crit);color:#fff">빨강</span></td><td>손상 배터리 스티커, 경고등</td><td>A, C</td><td>분홍 (조명에 따라)</td></tr>
+        <tr><td><span class="pill" style="background:var(--tape-pink);color:#fff">분홍</span></td><td>요구조자 다리 밴드 (2안)</td><td>D</td><td>빨강 (조명에 따라)</td></tr>
+        <tr><td><span class="pill" style="background:#1c2220;color:#fff">검정</span></td><td>소화기·표지 자리 카드</td><td>C</td><td>어두운 바닥 → 바닥은 밝은 색으로</td></tr>
+      </tbody></table></div>
+      <p class="muted" style="font-size:12.5px">빨강과 분홍은 쓰는 로봇과 자리가 달라서 함께 보일 일이 거의 없습니다. 그래도 시연장 조명에서 한 번 구분되는지 확인해야 합니다.</p></div>
+    <p class="muted" style="font-size:12.5px">확인 필요: 걸으면서 20 cm 테이프를 놓치지 않는지, 시연장 조명에서 위 색들이 서로 안 헷갈리는지, 라인 추적 중에 다른 색도 같이 알아보는지.</p>
+    <div class="callout warn" style="margin-top:12px">
+      <h3>직접 해 보니 · 제자리에서 안 꺾이고 크게 돈다</h3>
+      <p>좌회전하려면 크게 돌아야 했습니다. 그래서 꺾는 곳의 테이프 모양을 로봇에 맞춥니다.</p>
+      <div class="scroll"><svg viewBox="0 0 720 190" style="min-width:600px;display:block;width:100%;height:auto;margin-top:6px" role="img" aria-label="꺾는 곳 테이프 모양 세 가지: 직각은 안 됨, 둥근 모서리는 됨, 길 끝은 회전 고리">
+        <g font-family="var(--font-sans)">
+          <rect x="0" y="0" width="720" height="190" rx="8" fill="var(--floor)"/>
+          <!-- 1 right angle -->
+          <text x="120" y="24" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--crit)">✕ 직각으로 붙이기</text>
+          <path d="M40 150 H130 V50" fill="none" stroke="var(--tape-green)" stroke-width="8"/>
+          <path d="M60 150 H118 Q150 150 170 120" fill="none" stroke="var(--crit)" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="120" y="176" text-anchor="middle" font-size="11.5" fill="var(--muted)">로봇은 크게 돌아서 선을 놓침</text>
+          <!-- 2 rounded -->
+          <text x="360" y="24" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ok)">○ 둥글게 붙이기</text>
+          <path d="M280 150 H330 A60 60 0 0 0 390 90 V50" fill="none" stroke="var(--tape-green)" stroke-width="8"/>
+          <rect x="300" y="138" width="8" height="24" fill="var(--tape-blue)"/>
+          <path d="M330 150 L330 90 L390 90" fill="none" stroke="var(--muted)" stroke-dasharray="3 3"/>
+          <text x="352" y="112" font-size="11" font-family="var(--font-mono)" fill="var(--muted)">R</text>
+          <text x="360" y="176" text-anchor="middle" font-size="11.5" fill="var(--muted)">곡선 반지름 R = 로봇이 실제로 도는 크기</text>
+          <text x="304" y="132" text-anchor="middle" font-size="10" fill="var(--tape-blue)" font-weight="700">CP</text>
+          <!-- 3 end loop -->
+          <text x="600" y="24" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ok)">○ 길 끝은 회전 고리</text>
+          <path d="M500 100 H560 A40 40 0 1 1 560 101" fill="none" stroke="var(--tape-green)" stroke-width="8"/>
+          <rect x="540" y="88" width="8" height="24" fill="var(--tape-yellow)"/>
+          <path d="M600 62 a40 40 0 0 1 36 30" fill="none" stroke="var(--ink)" stroke-width="1.5" marker-end="url(#loopArr)"/>
+          <defs><marker id="loopArr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="var(--ink)"/></marker></defs>
+          <text x="600" y="176" text-anchor="middle" font-size="11.5" fill="var(--muted)">U턴 대신 고리를 한 바퀴 돌아 되돌아옴</text>
+        </g>
+      </svg></div>
+      <dl class="kv" style="font-size:13.5px;margin-top:6px">
+        <dt>꺾는 곳</dt><dd>직각 대신 반지름 R의 곡선으로 붙입니다. CP 마커는 곡선이 시작되기 <b>앞</b>에 붙여서, 마커를 보고 나서 곡선을 따라 돌게 합니다.</dd>
+        <dt>길 끝</dt><dd>A·B·C는 길을 왕복하므로 끝에서 U턴이 필요합니다. 제자리 U턴이 안 되니 끝에 회전 고리를 붙이고, 길 끝 CP를 고리 입구에 둡니다.</dd>
+        <dt>미션맵 공간</dt><dd>곡선과 고리가 들어가려면 벽과 길 사이, 길과 길 사이에 R 이상 여유가 있어야 합니다. 5 m × 5 m면 곡선과 고리를 넣을 여유가 3 m × 2 m보다 훨씬 많습니다.</dd>
+        <dt>비상시 안내</dt><dd>사각지대 자리에서 몸을 돌려 비상구를 가리키는 건 빼고, 화살표·색·음성으로 안내합니다.</dd>
+      </dl>
+      <p style="font-size:13.5px"><b>먼저 잴 것:</b> 메카독이 좌회전·우회전할 때 실제로 그리는 원의 반지름 R. 이 값으로 곡선 테이프 크기, 회전 고리 크기, 미션맵 크기를 정합니다.</p>
+    </div>
+  </div>
+  <div class="card" id="cpTrack">
+    <div class="controls" style="justify-content:space-between">
+      <h3>A·B·C가 각자 위치를 알리는 방법</h3>
+      <div class="controls"><label class="toggle"><input type="checkbox" id="trkMiss"> A가 CP3을 놓쳤다면?</label><button type="button" class="pbtn" id="trkPlay">재생</button></div>
+    </div>
+    <p class="muted" style="font-size:13.5px">세 대 모두 <b style="color:var(--ink)">도크에서 출발해 CP11(파랑)에서 왼쪽</b>으로 나간 뒤, 왼쪽 벽을 타고 CP10 → CP5 → CP1 순서로 올라갑니다. 지나온 색 순서가 <b style="color:var(--ink)">지문</b>입니다. <b style="color:var(--ink)">파노 = CP10</b>(C 도착), <b style="color:var(--ink)">파노노 = CP5</b>(B 도착), <b style="color:var(--ink)">파노노노 = CP1</b>(A 도착). 노트북은 다음에 나올 색을 미리 알고 있어서, 색이 안 맞으면 그 자리에서 "마커를 놓쳤다"를 알아채고 맞춥니다.</p>
+    <div class="two">
+      <div class="map"><div id="trkMap"></div></div>
+      <div class="stack" style="gap:8px" id="trkPanel"></div>
+    </div>
+    <div class="log" style="margin-top:10px;max-height:170px"><ol id="trkLog"></ol></div>
+  </div>
+  <div class="two">
+    <div class="map"><div id="mapDemo"></div>
+      <div class="legend"><span>숫자는 오른쪽 재료 목록 번호입니다</span><span><i style="background:var(--tape-yellow)"></i>노랑 7곳 (CP1·3·5·7·9·10·12)</span><span><i style="background:var(--tape-blue)"></i>파랑 5곳 (CP2·4·6·8·11)</span></div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div class="controls" style="justify-content:space-between"><h3>미션맵 재료 목록 <span class="muted" style="font-weight:400">· 바닥 5 m × 5 m · 노트북·폰은 팀 보유</span></h3><span class="muted mono" id="matCount" style="font-size:12.5px"></span></div>
+        <div class="mats" id="mats"></div>
+        <p class="muted" style="font-size:13px">테이프 색은 비전 모듈이 실제로 구분하는지 신청 전에 시험해야 합니다. 바닥 색과 조명에 따라 달라집니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+
+/* ---------- tabs ---------- */
+const TABS=[["bg","배경"],["roles","평시 역할"],["triggers","트리거"],["emergency","비상시 동작"],["control","관제 화면"],["demo","시연"]];
+const tabrow=$("#tabrow");
+TABS.forEach(([id,name],i)=>{const b=document.createElement("button");b.className="tab";b.type="button";b.setAttribute("role","tab");b.dataset.id=id;b.innerHTML='<span class="n">'+(i+1)+'</span>'+name;b.onclick=()=>{location.hash=id};tabrow.appendChild(b)});
+function showTab(){
+  let id=(location.hash||"").slice(1);if(!TABS.some(t=>t[0]===id))id="bg";
+  TABS.forEach(([t])=>{$("#p-"+t).hidden=t!==id});
+  tabrow.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.id===id?"true":"false"));
+  if(id!=="demo")pause();
+}
+window.addEventListener("hashchange",()=>{showTab();window.scrollTo({top:Math.min(window.scrollY,document.querySelector("nav.tabs").offsetTop)})});
+document.addEventListener("click",e=>{const a=e.target.closest("[data-jump]");if(a){e.preventDefault();location.hash=a.dataset.jump}});
+
+
+/* ---------- background matrix ---------- */
+const MX=[
+  ["넓고 대피로가 복잡한가",["warn","보관동 위주라 구조가 단순"],["ok","랙, 라인, 가벽으로 복잡"],["warn","길고 좁은 일자형 터널"]],
+  ["대피할 사람이 있나",["warn","상주 인원 적음, 보관은 자동화"],["ok","작업자 다수 상주"],["crit","평소 사람이 거의 없음"]],
+  ["고정 설비로 이미 되나",["warn","능동형 화재대응 설비 있음"],["ok","유도등은 있지만 방향이 고정"],["crit","천장 레일 점검 로봇이 이미 있음 (ETRI 2021, 서울시 2026 계약)"]],
+  ["메카독 키 높이로 끝나나",["ok","랙 하단과 바닥은 가능"],["ok","통로와 갈림길은 가능"],["crit","케이블 선반이 벽면 위쪽"]],
+  ["평평하고 문 없이 트였나",["ok","대체로 가능"],["ok","가능"],["crit","계단, 배수로, 방화문이 많음"]],
+  ["사고 사례",["warn","수거센터 자체 화재 기사는 못 찾음. 경북 폐기물시설 화재 41건 중 33건이 폐리튬배터리 자연발화"],["ok","아리셀 2024 (23명 사망), 인천 쿠팡 물류센터 2026.7"],["warn","KT 아현 통신구 2018, 국내 공동구 화재 8건 연구"]]];
+const PL={ok:"통과",warn:"애매",crit:"걸림"};
+$("#matrix").innerHTML=MX.map(r=>'<tr><th>'+r[0]+'</th>'+[1,2,3].map(i=>'<td'+(i===2?' class="pick"':'')+'><span class="pill '+r[i][0]+'">'+PL[r[i][0]]+'</span><span class="cellnote">'+r[i][1]+'</span></td>').join("")+'</tr>').join("");
+
+/* ---------- map geometry ---------- */
+const N={EX1:[20,220],W:[40,220],J1:[215,220],J2:[300,220],J3:[385,220],E:[560,220],EX2:[580,220],
+  TW:[40,40],T1:[215,40],T2:[385,40],TE:[560,40],BW:[40,340],BM:[300,340],BE:[560,340],DK:[300,370]};
+const EDGES=[["EX1","W"],["W","J1"],["J1","J2","c1"],["J2","J3","c2"],["J3","E"],["E","EX2"],
+  ["W","TW"],["TW","T1"],["T1","T2"],["T2","TE"],["TE","E"],["T1","J1"],["T2","J3"],
+  ["W","BW"],["BW","BM"],["BM","BE"],["BE","E"],["BM","J2"],["BM","DK"]];
+const BRANCH=new Set(["TW|W","T1|TW","T1|T2","T2|TE","E|TE","J1|T1","J3|T2","BW|W","BM|BW","BE|BM","BE|E","BM|J2"]);
+const OB={c1:[257,220],c2:[342,220]};
+const Z={A1:[60,60,135,120,"A1 보관 랙"],A2:[235,60,130,120,"A2 보관 랙"],A3:[405,60,135,120,"A3 보관 랙"],
+  B1:[60,250,220,70,"B1 작업 라인"],B2:[320,250,220,70,"B2 작업 라인"],
+  C1:[22,207,278,26,"C1"],C2:[300,207,278,26,"C2"],OF:[240,352,120,36,"사무·도크"]};
+const CPS=[["CP1","TW"],["CP2","T1"],["CP3","T2"],["CP4","TE"],["CP5","W"],["CP6","J1"],["CP8","J3"],["CP9","E"],["CP10","BW"],["CP11","BM"],["CP12","BE"],["CP7","J2"]];
+const REFCP=["CP1","CP3","CP5","CP7","CP9","CP10","CP12"];
+const BLIND={J1:"랙 사이",J3:"랙 사이",BM:"라인 사이"};
+const ZFILL={idle:"var(--floor2)",ok:"var(--ok-bg)",warn:"var(--warn-bg)",crit:"var(--crit-bg)"};
+const ZSTROKE={idle:"var(--line)",ok:"var(--ok)",warn:"var(--warn)",crit:"var(--crit)"};
+
+function mapView(el,opt){
+  opt=opt||{};
+  const walls='<path d="M20 200 V20 H580 V200 M580 240 V395 H20 V240" fill="none" stroke="var(--wall)" stroke-width="4" stroke-linejoin="round"/>';
+  el.innerHTML='<svg viewBox="0 0 600 410" role="img" aria-label="작업장 맵: 위쪽 보관 랙 3개, 가운데 간선 통로, 아래쪽 작업 라인 2개와 사무 구역, 양 끝 비상구 2개">'+
+    '<rect x="20" y="20" width="560" height="375" fill="var(--floor)"/>'+
+    '<g data-l="zones"></g>'+
+    '<g data-l="net"></g>'+
+    walls+
+    '<g data-l="dyn"></g>'+
+    '<g data-l="top"></g></svg>';
+  const L=k=>el.querySelector('[data-l="'+k+'"]');
+  function render(s){
+    s=s||{};
+    // zones
+    let z="";
+    for(const k in Z){const [x,y,w,h,lab]=Z[k];const st=k[0]==="C"?"none":((s.zones&&s.zones[k])||"none");
+      const isC=k[0]==="C";const hl=s.hlZones&&s.hlZones.includes(k);
+      let fill=st==="none"?(isC?"transparent":(k[0]==="A"?"color-mix(in srgb,var(--rack) 28%,transparent)":"var(--floor2)")):ZFILL[st];
+      let stroke=st==="none"?"none":ZSTROKE[st];
+      if(hl){stroke="var(--robot)"}
+      z+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="4" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+(hl?3:1.5)+'"/>';
+      if(k[0]==="A"&&st==="none"){for(let i=1;i<4;i++)z+='<line x1="'+(x+8)+'" x2="'+(x+w-8)+'" y1="'+(y+i*h/4)+'" y2="'+(y+i*h/4)+'" stroke="var(--rack)" stroke-opacity=".5" stroke-width="1"/>'}
+      if(!isC)z+='<text x="'+(x+w/2)+'" y="'+(y+h/2+4)+'" text-anchor="middle" font-size="12" font-family="var(--font-sans)" fill="var(--muted)" font-weight="600">'+lab+'</text>';
+      else z+='<text x="'+(k==="C1"?120:472)+'" y="'+(y-4)+'" text-anchor="middle" font-size="11" font-family="var(--font-mono)" fill="var(--muted)">간선 '+k+'</text>';
+    }
+    L("zones").innerHTML=z;
+    // network
+    let n="";
+    if(s.segs)for(const key in s.segs){const [a,b]=key.split("|");if(!N[a]||!N[b])continue;const st=s.segs[key];const col=st==="ok"?"var(--ok)":st==="warn"?"var(--warn)":"var(--crit)";
+      n+='<line x1="'+N[a][0]+'" y1="'+N[a][1]+'" x2="'+N[b][0]+'" y2="'+N[b][1]+'" stroke="'+col+'" stroke-opacity="'+(st==="ok"?.28:.5)+'" stroke-width="'+(st==="ok"?12:18)+'" stroke-linecap="butt"/>';
+      if(st!=="ok"){const mx=(N[a][0]+N[b][0])/2,my=(N[a][1]+N[b][1])/2;n+='<text x="'+mx+'" y="'+(my+30)+'" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-sans)" fill="'+col+'" style="paint-order:stroke" stroke="var(--floor)" stroke-width="3">'+(st==="warn"?"미확정":"막힘 확정")+'</text>'}}
+    const hlE=new Set((s.hlEdges||[]).map(e=>e.slice().sort().join("|")));
+    EDGES.forEach(([a,b])=>{const [x1,y1]=N[a],[x2,y2]=N[b];const on=hlE.has([a,b].sort().join("|"));
+      const br=BRANCH.has([a,b].sort().join("|"));
+      n+='<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="var(--route)" stroke-opacity="'+(on?1:.45)+'" stroke-width="'+(on?6:(br?2.5:4))+'" stroke-linecap="round"'+(b==="DK"?' stroke-dasharray="3 5"':(br&&!on?' stroke-dasharray="6 5"':''))+'/>'});
+    n+='<text x="300" y="33" text-anchor="middle" font-size="10.5" font-weight="700" font-family="var(--font-sans)" fill="var(--robot)">보관동 구역</text><text x="566" y="390" text-anchor="end" font-size="10.5" font-weight="700" font-family="var(--font-sans)" fill="var(--person)">작업장 구역</text>';
+    if(s.blind)(Array.isArray(s.blind)?s.blind:Object.keys(BLIND)).forEach(k=>{const [x,y]=N[k];n+='<circle cx="'+x+'" cy="'+y+'" r="17" fill="none" stroke="var(--signal)" stroke-width="2" stroke-dasharray="3 3"/>'});
+    // exits
+    [["EX1",14,"비상구 1",28,"start"],["EX2",574,"비상구 2",572,"end"]].forEach(([k,x,lab,tx,anc])=>{const bad=s.exitBad&&s.exitBad[k];
+      n+='<rect x="'+x+'" y="200" width="12" height="40" rx="2" fill="'+(bad?"var(--crit)":"var(--ok)")+'"/>';
+      n+='<text x="'+tx+'" y="256" text-anchor="'+anc+'" font-size="11.5" font-weight="700" font-family="var(--font-sans)" fill="'+(bad?"var(--crit)":"var(--ok)")+'">'+lab+(bad?" · 사용 불가":"")+'</text>'});
+    if(s.cps)CPS.forEach(([c,k])=>{const [x,y]=N[k];const rt=x>500,lx=rt?x-10:x+10,ly=y>300?y+19:y-10;n+='<rect x="'+(x-7)+'" y="'+(y-7)+'" width="14" height="14" rx="2" fill="'+(REFCP.includes(c)?"var(--tape-yellow)":"var(--tape-blue)")+'" stroke="var(--ink)" stroke-opacity=".5"/>'+'<text x="'+lx+'" y="'+ly+'" text-anchor="'+(rt?"end":"start")+'" font-size="11" font-weight="700" font-family="var(--font-mono)" fill="var(--ink)" style="paint-order:stroke" stroke="var(--floor)" stroke-width="3">'+c+'</text>'});
+    L("net").innerHTML=n;
+    // dynamic
+    let d="";
+    (s.paths||[]).forEach(p=>{const pts=p.pts.map(q=>q.join(",")).join(" ");const col=p.kind==="bad"?"var(--crit)":p.kind==="plan"?"var(--robot)":"var(--ok)";
+      d+='<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="'+(p.kind==="plan"?3:4)+'" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="'+(p.kind==="bad"?"8 6":"10 6")+'" class="flow" opacity=".95"/>';
+      if(p.kind!=="plan"){const e=p.pts[p.pts.length-1],f=p.pts[p.pts.length-2]||e;const ang=Math.atan2(e[1]-f[1],e[0]-f[0])*180/Math.PI;
+        d+='<path d="M0 -6 L10 0 L0 6 Z" fill="'+col+'" transform="translate('+e[0]+' '+e[1]+') rotate('+ang+') translate(-6 0)"/>'}});
+    (s.boxes||[]).forEach(([x,y])=>{d+='<rect x="'+(x-11)+'" y="'+(y-11)+'" width="22" height="22" rx="2" fill="var(--box)" stroke="var(--ink)" stroke-opacity=".35"/><path d="M'+(x-11)+' '+(y-3)+' H'+(x+11)+'" stroke="var(--ink)" stroke-opacity=".25"/>'});
+    if(s.fire){const fx=s.fire==="west"?110:490,fy=130;d+='<circle cx="'+fx+'" cy="'+fy+'" r="14" fill="var(--crit)" class="fire-pulse"/><circle cx="'+fx+'" cy="'+fy+'" r="9" fill="var(--crit)"/><text x="'+fx+'" y="'+(fy+28)+'" text-anchor="middle" font-size="11" font-weight="700" fill="var(--crit)" font-family="var(--font-sans)" style="paint-order:stroke" stroke="var(--floor)" stroke-width="3">발화 · '+(s.fire==="west"?"A1 랙":"A3 랙")+'</text>'}
+    (s.markers||[]).forEach(m=>{const col=m.c||"var(--crit)";
+      d+='<circle cx="'+m.x+'" cy="'+m.y+'" r="6" fill="'+col+'" stroke="var(--surface)" stroke-width="2"/>';
+      if(m.label)d+='<text x="'+(m.x+(m.dx||9))+'" y="'+(m.y+(m.dy||4))+'" font-size="11" font-family="var(--font-sans)" font-weight="600" fill="'+col+'" text-anchor="'+(m.anc||"start")+'">'+esc(m.label)+'</text>'});
+    (s.nums||[]).forEach(m=>{d+='<circle cx="'+m.x+'" cy="'+m.y+'" r="10" fill="var(--ink)"/><text x="'+m.x+'" y="'+(m.y+4)+'" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-mono)" fill="var(--bg)">'+m.n+'</text>'});
+    (s.xmarks||[]).forEach(([x,y])=>{d+='<circle cx="'+x+'" cy="'+y+'" r="10" fill="var(--crit)"/><path d="M'+(x-4.5)+' '+(y-4.5)+' L'+(x+4.5)+' '+(y+4.5)+' M'+(x+4.5)+' '+(y-4.5)+' L'+(x-4.5)+' '+(y+4.5)+'" stroke="var(--surface)" stroke-width="2.5" stroke-linecap="round"/>'});
+    (s.signs||[]).forEach(g=>{const col=g.bad?"var(--crit)":"var(--ok)";d+='<rect x="'+(g.x-15)+'" y="'+(g.y-34)+'" width="30" height="20" rx="3" fill="'+col+'"/><text x="'+g.x+'" y="'+(g.y-19)+'" text-anchor="middle" font-size="14" font-weight="700" fill="var(--surface)" font-family="var(--font-mono)">'+g.arrow+'</text><line x1="'+g.x+'" y1="'+(g.y-14)+'" x2="'+g.x+'" y2="'+(g.y-4)+'" stroke="'+col+'" stroke-width="2"/>'});
+    (s.people||[]).forEach(p=>{if(p.hidden)return;if(p.kind==="hidden"){d+='<circle cx="'+p.x+'" cy="'+p.y+'" r="7" fill="none" stroke="var(--person)" stroke-width="1.5" stroke-dasharray="2 2"/>';return}
+      if(p.kind==="found")d+='<circle cx="'+p.x+'" cy="'+p.y+'" r="15" fill="var(--crit)" class="fire-pulse" opacity=".5"/>';
+      d+='<g transform="translate('+p.x+' '+p.y+')"><path d="M-6 8 Q-6 0 0 0 Q6 0 6 8 Z" fill="var(--person)" stroke="var(--surface)" stroke-width="1.2"/><circle cx="0" cy="-4.5" r="4" fill="var(--person)" stroke="var(--surface)" stroke-width="1.2"/></g>'});
+    (s.robots||[]).forEach(r=>{
+      if(r.ring)d+='<circle cx="'+r.x+'" cy="'+r.y+'" r="15" fill="none" stroke="var(--robot)" stroke-width="3"/>';
+      d+='<circle cx="'+r.x+'" cy="'+r.y+'" r="10" fill="var(--robot)" stroke="var(--ink)" stroke-width="1.5"/><text x="'+r.x+'" y="'+(r.y+4.5)+'" text-anchor="middle" font-size="12" font-weight="700" font-family="var(--font-mono)" fill="var(--robot-ink)">'+r.id+'</text>';
+      if(r.arrow){const bad=r.arrow==="X";d+='<rect x="'+(r.x-15)+'" y="'+(r.y-38)+'" width="30" height="22" rx="4" fill="var(--ink)"/><text x="'+r.x+'" y="'+(r.y-22)+'" text-anchor="middle" font-size="15" font-weight="700" font-family="var(--font-mono)" fill="'+(bad?"var(--crit)":"var(--route)")+'">'+r.arrow+'</text>'}
+      if(r.num){d+='<circle cx="'+(r.x+10)+'" cy="'+(r.y-9)+'" r="6.5" fill="var(--ink)"/><text x="'+(r.x+10)+'" y="'+(r.y-6)+'" text-anchor="middle" font-size="8.5" font-weight="700" font-family="var(--font-mono)" fill="var(--bg)">'+r.num+'</text>'}
+      if(r.flag){d+='<text x="'+r.x+'" y="'+(r.y+24)+'" text-anchor="middle" font-size="10.5" font-weight="700" font-family="var(--font-sans)" fill="var(--'+(r.flagC||"warn")+')">'+esc(r.flag)+'</text>'}
+    });
+    L("dyn").innerHTML=d;
+    let t="";
+    if(s.dims){t+='<g font-family="var(--font-mono)" font-size="11" fill="var(--muted)"><line x1="20" y1="8" x2="580" y2="8" stroke="var(--muted)"/><line x1="20" y1="4" x2="20" y2="12" stroke="var(--muted)"/><line x1="580" y1="4" x2="580" y2="12" stroke="var(--muted)"/><rect x="270" y="0" width="60" height="14" fill="var(--surface)"/><text x="300" y="11" text-anchor="middle">5 m</text>'+
+      '<line x1="592" y1="20" x2="592" y2="395" stroke="var(--muted)"/><rect x="584" y="190" width="16" height="44" fill="var(--surface)"/><text x="596" y="212" text-anchor="middle" transform="rotate(90 596 212)">5 m</text></g>'}
+    L("top").innerHTML=t;
+  }
+  return {render};
+}
+
+/* ---------- routing ---------- */
+const ADJ={};EDGES.forEach(([a,b,o])=>{(ADJ[a]=ADJ[a]||[]).push([b,o]);(ADJ[b]=ADJ[b]||[]).push([a,o])});
+const dist=(a,b)=>Math.hypot(N[a][0]-N[b][0],N[a][1]-N[b][1]);
+function route(from,exits,blocked){
+  const C={},P={},seen=new Set();Object.keys(N).forEach(k=>C[k]=Infinity);C[from]=0;
+  while(true){let u=null;for(const k in C)if(!seen.has(k)&&(u===null||C[k]<C[u]))u=k;if(u===null||C[u]===Infinity)break;seen.add(u);
+    if(exits.includes(u)){const path=[u];let c=u;while(P[c]){c=P[c];path.unshift(c)}return path}
+    for(const [v,o] of ADJ[u]){if(o&&blocked.has(o))continue;if((v==="EX1"||v==="EX2")&&!exits.includes(v))continue;if(v==="DK")continue;
+      const nd=C[u]+dist(u,v);if(nd<C[v]){C[v]=nd;P[v]=u}}}
+  return null;
+}
+function arrowOf(a,b){const dx=N[b][0]-N[a][0],dy=N[b][1]-N[a][1];return Math.abs(dx)>=Math.abs(dy)?(dx>0?"→":"←"):(dy>0?"↓":"↑")}
+const BENT={"↑→":"↱","↑←":"↰","↓→":"↳","↓←":"↲"};
+function arrowFull(path){const d1=arrowOf(path[0],path[1]);if(d1==="↑"||d1==="↓"){for(let i=1;i<path.length-1;i++){const d=arrowOf(path[i],path[i+1]);if(d!==d1)return BENT[d1+d]||d1}}return d1}
+function usesBlocked(path,blocked){for(let i=0;i<path.length-1;i++){const e=EDGES.find(([a,b])=>(a===path[i]&&b===path[i+1])||(b===path[i]&&a===path[i+1]));if(e&&e[2]&&blocked.has(e[2]))return e[2]}return null}
+
+/* ---------- 2. roles ---------- */
+const ROLES={
+  A:{name:"보관구역 순찰",zone:"보관동 둘레 + 랙 사이 통로",who:"건주 안의 A(보관구역 순찰) + 예은 안의 A구역",
+     targets:["랙 하단 적재 상태 (박스가 통로로 튀어나왔는지)","배터리 외관 이상 (부풂, 누액, 그을림)"],
+     note:"보관동 구역의 벽 쪽 둘레 길과 랙 사이 통로를 돕니다. 랙에 가려 유도등이 잘 안 보이는 곳이라, 화재 때는 랙 사이 통로 출구(CP6)에 섭니다.",
+     edges:[["W","TW"],["TW","T1"],["T1","T2"],["T2","TE"],["TE","E"],["T1","J1"],["T2","J3"]],zones:["A1","A2","A3"],pos:[300,40],
+     markers:[{x:128,y:66,label:"외관 손상 마커",dy:16,anc:"middle",dx:0},{x:470,y:186,label:"적재 이상",dy:-8,anc:"middle",dx:0}]},
+  B:{name:"대피로 점검",zone:"간선 통로 + 비상구 2곳 앞",who:"건주 안의 C(대피로 점검) + 예은 안의 C구역 · 기존 대피로 순찰 기획의 핵심",
+     targets:["간선 위 적치물","비상구 앞 적치물","구간별 마지막 통과 시각 기록"],
+     note:"두 구역을 잇는 큰길을 맡습니다. 여기서 찾은 막힘 기록이 있어야 화재 때 막힌 길을 빼고 안내할 수 있습니다.",
+     edges:[["EX1","W"],["W","J1"],["J1","J2"],["J2","J3"],["J3","E"],["E","EX2"]],zones:["C1","C2"],pos:[440,220],
+     markers:[{x:30,y:244,label:"비상구 앞",dy:16,dx:-2},{x:570,y:244,label:"비상구 앞",dy:16,dx:2,anc:"end"},{x:257,y:196,label:"통로 막힘 · CP6~CP7 사이",dy:-8,anc:"middle",dx:0}]},
+  C:{name:"설비·통로 점검 + 안전 안내",zone:"작업장 둘레 + 라인 사이 통로",who:"건주 안의 D(안전 안내) + 예은 안의 D(설비·통로 점검)",
+     targets:["경고등 점등","소화기와 비상구 표지가 제자리에 있는지","작업자에게 음성 안내"],
+     note:"작업장 구역의 둘레 길과 라인 사이 통로를 돕니다. 화재 때는 라인 사이 통로 출구(CP11)에 섭니다. 1안에서는 D가 그 방향까지 안내하므로 작업장 서쪽 끝(CP10)으로 갑니다.",
+     edges:[["W","BW"],["BW","BM"],["BM","BE"],["BE","E"],["BM","J2"]],zones:["B1","B2","OF"],pos:[150,340],
+     markers:[{x:170,y:328,label:"경고등",dx:9,dy:-2},{x:430,y:328,label:"소화기 자리",dx:9,dy:-2,c:"var(--ok)"}]},
+  D:{name:"대기 · 재확인 (교대)",zone:"도크에서 충전하며 대기 · 일이 생기면 출동",who:"건주 안의 B(재확인)",
+     targets:["A·B·C가 올린 이상 지점에 가서 같은 센서로 다시 측정","두 번 다 이상이면 '확정'으로 바꾸고 관리자 호출","배터리가 떨어진 순찰 로봇과 교대"],
+     note:"D는 특정 로봇이 아니라 지금 충전 차례인 로봇이 맡는 자리입니다. 순찰하던 로봇의 배터리가 떨어지면 도크로 돌아와 D가 되고, 충전이 끝난 D가 그 순찰 길로 나갑니다. 화재 때는 1안이면 간선 합류점(CP7)에서 안내하고, 2안이면 남은 사람을 찾습니다.",
+     edges:[],zones:["OF"],pos:[300,370],plan:[[300,370],[300,340],[300,220],[280,220]],
+     markers:[{x:257,y:196,label:"출동 예시 · CP6~CP7 사이 막힘 재확인",dy:-8,c:"var(--warn)",anc:"middle",dx:0}]}};
+let roleSel=store.get("mecadog-role","A");if(!ROLES[roleSel])roleSel="A";
+const mRoles=mapView($("#mapRoles"));
+$("#roleBtns").innerHTML=Object.keys(ROLES).map(k=>'<button type="button" class="rbtn" data-r="'+k+'"><span class="tag">'+k+'</span><span class="t">'+ROLES[k].name+'</span><span class="s">'+ROLES[k].zone+'</span></button>').join("");
+$("#roleBtns").addEventListener("click",e=>{const b=e.target.closest("[data-r]");if(!b)return;roleSel=b.dataset.r;store.set("mecadog-role",roleSel);renderRoles()});
+function renderRoles(){
+  const r=ROLES[roleSel];
+  document.querySelectorAll("#roleBtns .rbtn").forEach(b=>b.setAttribute("aria-pressed",b.dataset.r===roleSel?"true":"false"));
+  const others={A:[130,40],D:[300,370],B:[440,220],C:[150,340]};
+  const robots=Object.keys(ROLES).map(k=>({id:k,x:(k===roleSel?r.pos:others[k])[0],y:(k===roleSel?r.pos:others[k])[1],ring:k===roleSel}));
+  mRoles.render({cps:true,hlEdges:r.edges,hlZones:r.zones,robots,markers:r.markers,paths:r.plan?[{pts:r.plan,kind:"plan"}]:[],boxes:roleSel==="B"?[OB.c1]:[]});
+  $("#roleDetail").innerHTML='<div class="controls"><span class="rolechip">'+roleSel+'</span><h3>'+r.name+'</h3></div>'+
+    '<dl class="kv"><dt>순찰 구역</dt><dd>'+r.zone+'</dd><dt>점검 대상</dt><dd><ul style="margin:0;padding-left:18px">'+r.targets.map(t=>'<li>'+t+'</li>').join("")+'</ul></dd><dt>합친 안</dt><dd>'+r.who+'</dd></dl>'+
+    '<p class="muted" style="font-size:13.5px">'+r.note+'</p>'+
+    '<p style="font-size:13px"><a href="#triggers" data-jump="triggers">이 역할의 트리거 보기 →</a></p>';
+}
+renderRoles();
+
+/* ---------- 3. triggers ---------- */
+const TRIG=[
+  ["A","적재 이상 (박스가 통로로 튀어나옴)","초음파","통로 폭 기준값보다 20 cm 이상 가까움","랙 모형에서 박스 하나를 빼 둔다"],
+  ["A","외관 손상 (부풂, 누액, 그을림)","카메라 · 색","빨간 마커가 화면에서 일정 비율 이상","배터리 모형 박스에 빨간 스티커"],
+  ["D","A·B·C가 올린 이상 재확인","같은 센서로 재측정","두 번 모두 이상이면 확정 → 관리자 호출","관제 화면에서 미확정이 확정으로 바뀌는 장면"],
+  ["B","통로 막힘","초음파","30 cm 이내 물체가 3초 넘게 있음 (지나가는 사람과 구분)","간선 위에 박스"],
+  ["B","비상구 앞 적치","초음파 + 위치","비상구 체크포인트에서 앞 50 cm 이내 물체","비상구 표지 앞에 박스"],
+  ["C","경고등 점등","카메라 · 색","빨간 LED 점등을 감지","바닥 높이의 빨간 LED (건전지식)"],
+  ["C","소화기·표지가 제자리에 없음","카메라 · 색","정해진 자리에서 검정 카드가 안 보임","검정 카드를 떼어 둔다"],
+  ["D","(2안) 남은 사람","카메라 · 색","분홍 밴드가 화면 일정 비율 이상 → 멈춤, 소리, 발견 위치(지난 CP~다음 CP) 전송","숨은 팀원 다리에 분홍 밴드"],
+  ["공통","길 따라가기","카메라 · 라인 추적","초록 바닥 테이프를 화면 가운데에 두고 걸음","초록 테이프 5 cm 폭 · 간선과 지선 전체"],
+  ["공통","체크포인트 통과","카메라 · 색","초록 길 위에 노랑이나 파랑이 보이면 그 색을 보냄. 몇 번 CP인지는 노트북이 로봇의 순서표와 색 순서(지문)로 맞힘. 줄마다 노·파가 번갈아 나와야 하므로 같은 색이 두 번 연속이면 마커 하나를 놓친 것 → 그 자리에서 바로 맞춤","노랑 7곳, 파랑 5곳 (각 약 20 cm)"],
+  ["공통","갈림길에서 방향 고르기","카메라 · 색 + 순서표","나갈 때는 모두 CP11에서 좌회전, CP10에서 위로, 내 노랑에서 오른쪽으로. 그 밖의 갈림길은 순서표대로. 제자리 회전이 안 되므로 꺾는 곳 테이프를 둥글게 붙여 그 곡선을 따라 돌게 함","꺾는 곳마다 반지름 R(실측)의 곡선 테이프"],
+  ["공통","화재 (발화 구역)","기존 감지기·수신기 → Wi-Fi","노트북 버튼 '서쪽 화재 / 동쪽 화재'","노트북이 화재 수신기 역할"]];
+let trigF="전체";
+const tf=["전체","A","B","C","D","공통"];
+$("#trigFilters").innerHTML=tf.map(f=>'<button type="button" class="fbtn" data-f="'+f+'">'+f+'</button>').join("");
+$("#trigFilters").addEventListener("click",e=>{const b=e.target.closest("[data-f]");if(!b)return;trigF=b.dataset.f;renderTrig()});
+function renderTrig(){
+  document.querySelectorAll("#trigFilters .fbtn").forEach(b=>b.setAttribute("aria-pressed",b.dataset.f===trigF?"true":"false"));
+  $("#trigBody").innerHTML=TRIG.slice().sort((x,y)=>("ABCD공통".indexOf(x[0]))-("ABCD공통".indexOf(y[0]))).filter(r=>trigF==="전체"||r[0]===trigF).map(r=>'<tr><td><span class="rolechip'+(r[0]==="공통"?" all":"")+'">'+r[0]+'</span></td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]+'</td></tr>').join("");
+}
+renderTrig();
+
+/* side view: 1 cm = 6 px, floor at y=250 */
+(function(){
+  const F=250,S=6,X0=70;const cm=v=>F-v*S;
+  let s='<svg viewBox="0 0 760 300" role="img" aria-label="메카독 옆모습: 키 17.4 cm, 카메라 높이 약 16 cm, 표식은 30 cm 아래에 둬야 보임">';
+  s+='<rect x="0" y="'+F+'" width="760" height="50" fill="var(--floor2)"/>';
+  // ruler
+  for(let v=0;v<=40;v+=5){const y=cm(v);s+='<line x1="'+(X0-12)+'" x2="'+(X0-(v%10?6:0))+'" y1="'+y+'" y2="'+y+'" stroke="var(--muted)"/>';if(v%10===0)s+='<text x="'+(X0-16)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" font-family="var(--font-mono)" fill="var(--muted)">'+v+' cm</text>'}
+  s+='<line x1="'+(X0-12)+'" x2="'+(X0-12)+'" y1="'+cm(40)+'" y2="'+F+'" stroke="var(--muted)"/>';
+  // 30cm limit
+  s+='<line x1="'+X0+'" x2="740" y1="'+cm(30)+'" y2="'+cm(30)+'" stroke="var(--crit)" stroke-dasharray="6 5" stroke-width="1.5"/><text x="'+(X0+8)+'" y="'+(cm(30)-7)+'" text-anchor="start" font-size="12" font-weight="700" fill="var(--crit)" font-family="var(--font-sans)">표식 높이 상한 30 cm</text>';
+  // dog: body from x=100 to 100+26.9*6
+  const bx=100,bl=26.9*S;
+  s+='<g stroke="var(--ink)" stroke-width="5" stroke-linecap="round">';
+  [[bx+14,bx+6],[bx+40,bx+48],[bx+bl-60,bx+bl-70],[bx+bl-34,bx+bl-26]].forEach(([a,b])=>{s+='<line x1="'+a+'" y1="'+cm(10.5)+'" x2="'+b+'" y2="'+(F-2)+'"/>'});
+  s+='</g><rect x="'+bx+'" y="'+cm(13)+'" width="'+(bl-24)+'" height="'+(4*S)+'" rx="6" fill="var(--robot)" stroke="var(--ink)" stroke-width="1.5"/>';
+  s+='<rect x="'+(bx+bl-34)+'" y="'+cm(17.4)+'" width="40" height="'+(5*S)+'" rx="5" fill="var(--robot)" stroke="var(--ink)" stroke-width="1.5"/>';
+  const cx=bx+bl+6,cy=cm(16);
+  s+='<circle cx="'+cx+'" cy="'+cy+'" r="5" fill="var(--ink)"/><text x="'+(bx+bl-14)+'" y="'+(cm(17.4)-8)+'" text-anchor="middle" font-size="11.5" font-weight="600" font-family="var(--font-sans)" fill="var(--ink)">카메라 ≈ 16 cm</text>';
+  // height dim
+  s+='<line x1="'+(bx-12)+'" x2="'+(bx-12)+'" y1="'+cm(17.4)+'" y2="'+F+'" stroke="var(--muted)"/><text x="'+(bx-16)+'" y="'+(cm(8.7)+4)+'" text-anchor="end" font-size="11" font-family="var(--font-mono)" fill="var(--muted)">17.4</text>';
+  s+='<text x="'+(bx+bl/2+60)+'" y="'+(F+17)+'" text-anchor="middle" font-size="11" font-family="var(--font-mono)" fill="var(--muted)">26.9 cm · 711 g</text>';
+  // FOV
+  const far=730,up=Math.tan(22*Math.PI/180)*(far-cx),dn=cy-F;
+  s+='<path d="M'+cx+' '+cy+' L'+far+' '+(cy-up)+' L'+far+' '+F+' L'+(cx+Math.abs(dn)/Math.tan(22*Math.PI/180))+' '+F+' Z" fill="var(--signal)" fill-opacity=".1" stroke="var(--signal)" stroke-opacity=".5" stroke-dasharray="4 4"/>';
+  s+='<text x="'+(cx+150)+'" y="'+(cy-Math.tan(22*Math.PI/180)*150-6)+'" font-size="11.5" fill="var(--signal)" font-family="var(--font-sans)" font-weight="600" transform="rotate(-22 '+(cx+150)+' '+(cy-Math.tan(22*Math.PI/180)*150-6)+')">카메라 시야 (예시 각도, 실측 필요)</text>';
+  // ultrasonic
+  s+='<line x1="'+cx+'" y1="'+cm(14.5)+'" x2="560" y2="'+cm(14.5)+'" stroke="var(--route)" stroke-width="2.5" stroke-dasharray="2 5"/><text x="550" y="'+(cm(14.5)+16)+'" text-anchor="end" font-size="11.5" font-weight="600" fill="var(--route)" font-family="var(--font-sans)">초음파 2–400 cm · 정면만</text>';
+  // floor tape + checkpoint marker
+  s+='<rect x="'+(bx-20)+'" y="'+(F-3)+'" width="'+(740-bx+20)+'" height="5" fill="var(--route)"/>';
+  s+='<rect x="150" y="'+(F-4)+'" width="40" height="7" fill="var(--tape-yellow)" stroke="var(--ink)" stroke-opacity=".4"/>';
+  s+='<rect x="510" y="'+(F-4)+'" width="40" height="7" fill="var(--tape-blue)" stroke="var(--ink)" stroke-opacity=".4"/>';
+  s+='<text x="345" y="'+(F+46)+'" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--route)" font-family="var(--font-sans)">초록 바닥 테이프 · 따라 걷는 길</text>';
+  s+='<text x="170" y="'+(F+32)+'" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--warn)" font-family="var(--font-sans)">노랑 CP · 지금 밟고 있음</text>';
+  s+='<text x="530" y="'+(F+32)+'" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--ink)" font-family="var(--font-sans)">파랑 CP · 다음 마커가 카메라에 보임</text>';
+  s+='<text x="530" y="'+(F+46)+'" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="var(--font-sans)">노랑 다음 파랑 → 순서가 맞음</text>';
+  // objects
+  s+='<rect x="560" y="'+cm(18)+'" width="54" height="'+(18*S)+'" fill="var(--box)" stroke="var(--ink)" stroke-opacity=".3"/><text x="587" y="'+(cm(9)+4)+'" text-anchor="middle" font-size="11" font-family="var(--font-sans)" fill="var(--ink)">통로 박스</text>';
+  s+='<circle cx="650" cy="'+cm(8)+'" r="8" fill="var(--crit)"/><text x="650" y="'+(cm(8)+22)+'" text-anchor="middle" font-size="11" fill="var(--ink)" font-family="var(--font-sans)">경고등 8 cm</text><text x="650" y="'+(cm(8)+36)+'" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ok)" font-family="var(--font-sans)">보임</text>';
+  s+='<rect x="684" y="'+cm(48)+'" width="46" height="22" rx="3" fill="var(--ok)" opacity=".45"/>';
+  s+='<text x="707" y="'+(cm(34)+0)+'" text-anchor="middle" font-size="11" fill="var(--ink)" font-family="var(--font-sans)">벽 표지</text><text x="707" y="'+(cm(34)+14)+'" text-anchor="middle" font-size="11" font-weight="700" fill="var(--crit)" font-family="var(--font-sans)">안 보임</text>';
+  s+='</svg>';
+  // fix: wall sign at 48cm is above viewBox top (cm(48)<0), move to clamp
+  s=s.replace('y="'+cm(48)+'"','y="'+(cm(40))+'"');
+  $("#sideView").innerHTML=s;
+})();
+
+/* ---------- 4. emergency ---------- */
+const emer={fire:"west",mode:"mecha",plan:"1"};
+const mEmer=mapView($("#mapEmer"));
+function segBind(id,fn){const el=$(id);el.addEventListener("click",e=>{const b=e.target.closest("button[data-v]");if(!b)return;el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));fn(b.dataset.v)})}
+segBind("#segFire",v=>{emer.fire=v;renderEmer()});
+segBind("#segMode",v=>{emer.mode=v;renderEmer()});
+segBind("#segPlan",v=>{emer.plan=v;renderEmer()});
+$("#obC1").addEventListener("change",renderEmer);$("#obC2").addEventListener("change",renderEmer);
+const FIXED={J1:"EX1",J2:"EX1",J3:"EX2",BM:"EX1",BW:"EX1"};
+const JL={J1:"CP6",J2:"CP7",J3:"CP8",BM:"CP11",BW:"CP10"};
+const ROBOT_AT={J1:"A",J2:"D",J3:"B",BM:"C",BW:"C"};
+function renderEmer(){
+  const blocked=new Set();if($("#obC1").checked)blocked.add("c1");if($("#obC2").checked)blocked.add("c2");
+  const fireEx=emer.fire==="west"?"EX1":"EX2",safeEx=fireEx==="EX1"?"EX2":"EX1";
+  const paths=[],signs=[],robots=[],rows=[];const none=new Set();
+  (emer.plan==="1"?["J1","J2","J3","BW"]:["J1","J3","BM"]).forEach(j=>{
+    let p;if(emer.mode==="fixed")p=route(j,[FIXED[j]],none);else if(emer.mode==="smart")p=route(j,[safeEx],none);else p=route(j,[safeEx],blocked);
+    let verdict="ok",why="안전한 비상구로 갑니다";
+    if(!p){verdict="crit";why="안전한 길이 없음 → 관리자 호출"}
+    else{const toFire=p[p.length-1]===fireEx;const bl=usesBlocked(p,blocked);
+      if(toFire){verdict="crit";why="불이 난 비상구로 보냅니다"}
+      else if(bl){verdict="crit";why=(bl==="c1"?"CP6~CP7":"CP7~CP8")+" 사이 적치물에 막힙니다"}
+      else if(emer.mode==="mecha"&&p.length>1&&usesBlocked(route(j,[safeEx],none)||[],blocked)){why="막힌 간선을 피해 둘레 길로 돌아가게 안내합니다"}}
+    const arr=p&&p.length>1?arrowFull(p):"?";
+    if(p)paths.push({pts:p.map(k=>N[k]),kind:verdict==="ok"?"ok":"bad"});
+    if(emer.mode==="mecha")robots.push({id:ROBOT_AT[j],x:N[j][0],y:N[j][1],arrow:arr});
+    else signs.push({x:N[j][0],y:N[j][1],arrow:arr,bad:verdict!=="ok"});
+    rows.push([j,arr,verdict,why]);
+  });
+  const xm=emer.mode==="mecha"?[emer.fire==="west"?[30,194]:[570,194]]:[];
+  const p2=emer.plan==="2";
+  const robotsAll=emer.mode==="mecha"?(p2?robots.concat([{id:"D",x:450,y:340,flag:"수색 · 1명 발견",flagC:"crit"}]):robots):[];
+  if(emer.mode==="mecha"&&p2)paths.push({pts:[[300,370],[300,340],[450,340]],kind:"plan"});
+  const left={x:470,y:327,kind:emer.mode==="mecha"&&p2?"found":"hidden"};
+  const mk=[{x:470,y:300,label:emer.mode==="mecha"&&p2?"D가 발견 → 관제 화면에 핀":"남은 사람 · 아무도 확인 못 함",anc:"middle",dx:0,dy:-8,c:emer.mode==="mecha"&&p2?"var(--crit)":"var(--muted)"}];
+  mEmer.render({cps:true,fire:emer.fire,exitBad:{[fireEx]:true},paths,signs,robots:robotsAll,boxes:[...blocked].map(k=>OB[k]),xmarks:xm,blind:emer.plan==="1"?["J1","J3","BM","BW"]:true,markers:mk,
+    people:[{x:215,y:120},{x:300,y:290},{x:100,y:40},left]});
+  document.querySelectorAll("#planTable [data-col]").forEach(c=>c.classList.toggle("on",c.dataset.col===emer.plan));
+  const modeName={fixed:"고정 유도등",smart:"지능형 유도등",mecha:"메카독"}[emer.mode];
+  $("#emerTitle").textContent=modeName+" · 사각지대 지점별 안내 결과";
+  $("#verdicts").innerHTML=rows.map(([j,a,v,w])=>'<div class="verdict"><span class="j">'+JL[j]+(emer.mode==="mecha"?' · '+ROBOT_AT[j]:'')+'</span><span class="arrow" style="color:var(--'+(v==="ok"?"ok":"crit")+')">'+a+'</span><span><span class="pill '+v+'">'+(v==="ok"?"안전":"위험")+'</span> '+w+'</span></div>').join("");
+  const side=safeEx==="EX2"?"오른쪽 비상구 2":"왼쪽 비상구 1";
+  $("#voice").innerHTML=emer.mode==="mecha"?'음성 안내 · <b>"'+side+'로 대피하세요. '+(emer.fire==="west"?"왼쪽":"오른쪽")+'은 불이 났습니다."</b> 불 쪽 길은 X로 막습니다. '+(emer.plan==="1"?'<br>1안 · D는 간선 합류점(CP7)에서 꺾인 화살표로 라인 사이 출구까지 안내합니다. 그래서 C는 그 자리 대신 작업장 서쪽 끝(CP10, B1 뒤)으로 갑니다. 남은 사람은 확인하지 않습니다.':'<br>2안 · D는 안내하지 않고 작업장 구역을 수색합니다.'):
+    emer.mode==="fixed"?'고정 유도등은 불 위치도 막힘도 모르고, 항상 가장 가까운 비상구를 가리킵니다. 게다가 보라색 점선 원 자리는 랙과 라인에 가려 천장 유도등이 잘 안 보입니다.':'지능형 유도등은 불 위치는 알지만, 통로가 물건으로 막혔는지는 모릅니다. 보라색 점선 원 자리는 랙과 라인에 가려 방향이 맞아도 잘 안 보입니다.';
+}
+renderEmer();
+
+/* ---------- 5. control sim ---------- */
+const DUR=210;
+const KF={
+  A:[[0,270,370],[25,270,370],[28,300,340],[32,40,340],[34,40,220],[37,40,40],[42,40,40],[56,560,40],[72,40,40],[86,560,40],[100,128,40],[120,128,40],[123,215,40],[126,215,220]],
+  D:[[0,290,370],[67,290,370],[69,300,340],[73,300,220],[75,280,220],[93,280,220],[95,300,220],[98,300,340],[100,290,370],[170,290,370],[172,300,340],[180,450,340]],
+  B:[[0,310,370],[27,310,370],[30,300,340],[34,40,340],[36,40,220],[44,560,220],[57,40,220],[64,230,220],[93,230,220],[98,385,220],[104,560,220],[112,385,220]],
+  C:[[0,330,370],[29,330,370],[32,300,340],[39,40,340],[53,560,340],[67,40,340],[81,560,340],[95,40,340],[109,560,340],[116,430,340],[119,300,340]]};
+const PK=[
+  [[0,215,120],[127,215,120],[130,215,220],[145,580,220]],
+  [[0,300,290],[127,300,290],[128,300,340],[136,560,340],[140,560,220],[142,580,220]],
+  [[0,100,40],[127,100,40],[130,215,40],[135,215,220],[150,580,220]]];
+/* 실제 로봇 1~4. 역할(A~D)은 시간에 따라 바뀐다: 46초에 3번(C)이 배터리 부족으로 도크에 들어가 D가 되고, 4번(D)이 C로 나간다 */
+const SWAP=46;
+const PH={1:KF.A,2:KF.B,
+  3:[[0,330,370],[29,330,370],[32,300,340],[39,40,340],[47,300,340],[49,290,370]].concat(KF.D.filter(k=>k[0]>=67)),
+  4:[[0,290,370],[44,290,370],[46,300,340],[50,40,340],[57,560,340]].concat(KF.C.filter(k=>k[0]>57))};
+function physOf(role,t){const sw=t>=SWAP;return role==="A"?1:role==="B"?2:role==="C"?(sw?4:3):(sw?3:4)}
+function posOf(role,t){return kf(PH[physOf(role,t)],t)}
+function kf(list,t){if(t<=list[0][0])return [list[0][1],list[0][2]];for(let i=0;i<list.length-1;i++){const a=list[i],b=list[i+1];if(t<=b[0]){const f=(t-a[0])/(b[0]-a[0]||1);return [a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f]}}const l=list[list.length-1];return [l[1],l[2]]}
+const STATUS={
+  A:[[0,"도크 대기","idle"],[25,"순찰 · 보관동 둘레·랙 사이","ok"],[100,"이상 발견 · A1 외관 손상","crit"],[120,"사각지대로 이동 · CP6","fire"],[126,"안내 · CP6 랙 사이 → 비상구 2","fire"]],
+  D:[[0,"도크 대기 (충전)","idle"],[44,"교대 출동 · C 순찰 이어받기","ok"],[46,"교대 완료 · 충전 시작","idle"],[67,"출동 · CP6~CP7 사이 재확인","warn"],[82,"CP6~CP7 사이 막힘 확정 · 관리자 호출","crit"],[93,"도크로 복귀","ok"],[100,"도크 대기 (충전)","idle"],[170,"수색 · 작업장 구역","fire"],[181,"발견 · B2 앞 1명","crit"]],
+  B:[[0,"도크 대기","idle"],[27,"순찰 · 간선 대피로","ok"],[64,"정지 · CP6~CP7 사이 통로 막힘","warn"],[82,"대기 · 치울 때까지","warn"],[93,"재통과 · CP6~CP7 사이 정상","ok"],[98,"순찰 · 간선 대피로","ok"],[120,"안내 · CP8 랙 사이 → 비상구 2","fire"]],
+  C:[[0,"도크 대기","idle"],[29,"순찰 · 작업장 둘레·라인 사이","ok"],[39,"배터리 20% · 도크로 복귀","warn"],[46,"교대 완료 · 이어서 순찰","ok"],[116,"사각지대로 이동 · CP11","fire"],[120,"안내 · CP11 라인 사이 → 비상구 2","fire"]]};
+const RNAME={A:"보관구역 순찰",D:"대기·재확인",B:"대피로 점검",C:"설비·안내"};
+const ZEV=[[29,"OF","ok"],[36,"B1","ok"],[40,"A1","ok"],[49,"A2","ok"],[55,"B2","ok"],[54,"A3","ok"],[100,"A1","crit"],[181,"B2","crit"]];
+const SEV=[[64,"J1|J2","warn"],[82,"J1|J2","crit"],[95,"J1|J2","ok"]];
+const SEG_OK=(()=>{const o={};const es=EDGES.filter(e=>e[1]!=="DK"&&e[0]!=="EX1"&&e[1]!=="EX2");
+  for(let t=0;t<=120;t+=.25)for(const id of ["A","B","C"]){const [x,y]=posOf(id,t);
+    for(const [a,b] of es){const k=[a,b].sort().join("|");if(o[k]!=null)continue;const mx=(N[a][0]+N[b][0])/2,my=(N[a][1]+N[b][1])/2;if(Math.hypot(x-mx,y-my)<6)o[k]=t}}
+  return o})();
+function segsAt(t){const s={};for(const k in SEG_OK)if(t>=SEG_OK[k])s[k]="ok";SEV.forEach(([tt,k,st])=>{if(t>=tt)s[k]=st});return s}
+const LOG=[
+  [25,"관제","순찰 시작 · A·B·C 출발, D는 도크 대기","info"],
+  [28,"관제","출발 · 모두 CP11(파랑)에서 왼쪽으로 → CP10 → 위로","info"],
+  [36,"B","지문 파노노 = CP5 도착 · 간선 순찰 시작","ok"],
+  [37,"A","지문 파노노노 = CP1 도착 · 보관동 윗길 순찰 시작","ok"],
+  [39,"C","3번 로봇 배터리 20% → 도크로 복귀","warn"],
+  [44,"관제","교대 · 도크에 있던 4번 로봇이 C 역할로 출동","info"],
+  [44,"B","CP5 → CP9 · 간선 통과 확인","ok"],
+  [45,"A","CP1 → CP2 · 보관동 윗길 A1 구간 점검 완료","ok"],
+  [46,"관제","교대 완료 · 4번 = C(작업장 순찰), 3번 = D(대기·충전)","ok"],
+  [50,"C","작업장 둘레 · B1·B2 통과 확인","ok"],
+  [54,"B","간선 C1 통과 확인","ok"],
+  [60,"현장","(연출) 팀원이 CP6~CP7 사이 간선에 박스를 둠","info"],
+  [64,"B","CP6~CP7 사이 통로 막힘 감지 · 30 cm 이내 3초 · 미확정","warn"],
+  [67,"관제","D 출동 · CP6~CP7 사이 재확인 지시","info"],
+  [82,"D","CP6~CP7 사이 막힘 재확인 · 확정 → 관리자 호출","crit"],
+  [93,"현장","관리자 역할 팀원이 박스를 치움","info"],
+  [95,"B","CP6~CP7 사이 재통과 · 정상","ok"],
+  [100,"A","CP2 지남, CP1 아직 → CP1~CP2 사이 A1 랙 배터리 외관 이상 · 빨간 마커 → 관리자 확인 요청","crit"],
+  [120,"수신기","화재 · A1 랙 발화 (1:40에 A가 알린 손상 배터리 열폭주)","fire"],
+  [120,"관제","비상 모드 · 비상구 1 사용 불가, 비상구 2로 안내","fire"],
+  [126,"A·B·C","사각지대 지점 도착 (CP6·CP8 랙 사이, CP11 라인 사이) · → 표시, 음성 \"오른쪽 비상구 2로 대피하세요\"","fire"],
+  [150,"관제","비상구 2 · 작업자 3명 대피 확인","ok"],
+  [170,"D","수색 출동 · 작업장 구역","info"],
+  [181,"D","1명 발견 · CP11 지남, CP12 아직 → CP11~CP12 사이 (작업장 B2 앞)","crit"],
+  [195,"관제","시연 마무리","info"]];
+const SCENES=[
+  {s:0,e:25,name:"문제 제기",k:"",robot:"정지",people:"발표자: 아리셀 15초, 대피 중 사망 39%",show:"왜 대피 안내가 문제인가"},
+  {s:25,e:65,name:"평시 순찰 · 교대",k:"ok",robot:"A는 보관동 둘레, B는 간선, C는 작업장 둘레 순찰. D는 도크 대기. 0:39에 C(3번) 배터리 부족 → 도크로 복귀, D(4번)가 나가서 C를 이어받고 3번이 D가 됨",people:"관제 화면 구역이 하나씩 초록으로, 로봇 카드의 번호가 바뀜",show:"4대가 하는 일이 다 다르고, 배터리가 떨어지면 밀어내기식으로 교대한다"},
+  {s:65,e:100,name:"막힘 감지 → 재확인",k:"warn",robot:"B가 CP6~CP7 사이 박스 감지 → 정지·X·음성. D가 출동해 재확인",people:"화면 노랑 → 빨강, 팀원이 박스를 치우면 다시 초록",show:"감지와 재확인으로 오탐을 줄인다"},
+  {s:100,e:120,name:"보관구역 이상",k:"crit",robot:"A가 서쪽 A1 랙(비상구 1 쪽)에서 빨간 마커(손상 배터리) 발견",people:"화면 A1 빨강, 관리자 확인 요청",show:"평소 순찰이 위험 신호를 먼저 잡는다"},
+  {s:120,e:170,name:"화재 · 사각지대 안내",k:"fire",robot:"방금 그 A1 배터리에서 열폭주 → \"서쪽 화재\". 비상구 1은 불 쪽이라 사용 불가. A·B는 랙 사이, C는 라인 사이 출구(유도등이 가려지는 자리)로 가서 화살표·음성. 불 쪽 길은 X",people:"랙 뒤·라인 사이에 있던 팀원들이 화살표를 보고 비상구 2로",show:"아리셀처럼 출구 쪽 배터리에서 불이 나도, 사각지대에서 반대쪽 출구를 알려 준다"},
+  {s:170,e:195,name:"남은 사람 확인 · 2안",k:"crit",robot:"D가 작업장 구역을 훑다가 숨은 팀원의 다리(색 밴드) 발견 → 소리",people:"화면에 \"B2 앞 1명\"",show:"대피 뒤에도 남은 사람을 찾는다"},
+  {s:195,e:210,name:"마무리",k:"",robot:"전원 정지",people:"고정 유도등과 메카독 비교 한 장",show:"대체가 아니라 보완"}];
+const fmt=t=>{t=Math.floor(t);return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
+const mCtl=mapView($("#mapCtl"));
+const curStatus=(r,t)=>{let c=STATUS[r][0];for(const s of STATUS[r])if(t>=s[0])c=s;return c};
+function zoneOf(x,y){const CPN={};CPS.forEach(([c,k])=>CPN[k]=c);const lab=k=>CPN[k]||(k==="EX1"?"비상구1":k==="EX2"?"비상구2":k==="DK"?"도크":k);
+  if(y>=350)return "도크";
+  for(const [c,k] of CPS){if(Math.hypot(N[k][0]-x,N[k][1]-y)<5)return c}
+  for(const [a,b] of EDGES){const [x1,y1]=N[a],[x2,y2]=N[b];const L2=(x2-x1)**2+(y2-y1)**2;let u=((x-x1)*(x2-x1)+(y-y1)*(y2-y1))/L2;if(u<0||u>1)continue;const px=x1+u*(x2-x1),py=y1+u*(y2-y1);
+    if(Math.hypot(px-x,py-y)<4){if(b==="DK"||a==="DK")return "도크";const ls=[lab(a),lab(b)].sort((p,q)=>(parseInt(p.slice(2))||99)-(parseInt(q.slice(2))||99));return ls[0]+"~"+ls[1]}}
+  let best=null,bd=1e9;CPS.forEach(([c,k])=>{const d=Math.hypot(N[k][0]-x,N[k][1]-y);if(d<bd){bd=d;best=c}});return best+" 근처"}
+let simT=0,lastLogN=-1;
+function renderSim(t){
+  simT=t;
+  const zones={};for(const k in Z)zones[k]="idle";ZEV.forEach(([tt,k,s])=>{if(t>=tt)zones[k]=s});
+  const fire=t>=120?"west":null;
+  const robots=["A","B","C","D"].map(id=>{const [x,y]=posOf(id,t);const r={id,x,y,num:physOf(id,t)};if(id==="C"&&t>=39&&t<SWAP)r.flag="배터리 20% · 복귀",r.flagC="warn";if(id==="D"&&t>=44&&t<SWAP)r.flag="교대 출동",r.flagC="ok";
+    if(id==="A"&&t>=126)r.arrow="→";if(id==="C"&&t>=120)r.arrow="→";if(id==="B"&&t>=120)r.arrow="→";
+    if(id==="B"&&t>=64&&t<93)r.arrow="X";
+    if(id==="A"&&t>=100&&t<120)r.flag="손상 마커!",r.flagC="crit";
+    if(id==="D"&&t>=181)r.flag="1명 발견",r.flagC="crit";
+    return r});
+  let reached=0;
+  const people=PK.map(l=>{const [x,y]=kf(l,t);const done=t>=l[l.length-1][0];if(done)reached++;return {x,y,hidden:done}});
+  people.push({x:470,y:327,kind:t>=181?"found":"hidden"});
+  mCtl.render({zones,segs:segsAt(t),cps:true,blind:!!fire,robots,people,fire,exitBad:fire?{EX1:true}:{},boxes:t>=60&&t<93?[OB.c1]:[],xmarks:t>=126?[[30,194]]:[],markers:t>=100&&t<120?[{x:128,y:66}]:[],
+    paths:t>=126&&t<160?[{pts:[N.J1,N.J2,N.J3,N.E,N.EX2],kind:"ok"},{pts:[N.BM,N.BE,N.E,N.EX2],kind:"ok"}]:[]});
+  $("#rcards").innerHTML=["A","B","C","D"].map(id=>{const [,txt,lv]=curStatus(id,t);const [x,y]=posOf(id,t);
+    return '<div class="rcard"><span class="tag">'+id+'</span><div style="min-width:0"><div class="nm">'+RNAME[id]+' <span class="muted mono" style="font-weight:400;font-size:11.5px">· '+physOf(id,t)+'번 로봇</span></div><div class="st">'+txt+'</div></div><span class="pill '+lv+'">'+zoneOf(x,y)+'</span></div>'}).join("");
+  $("#exits").innerHTML='<div class="exit"><b>비상구 1 · 서쪽</b>'+(fire?'<span class="pill crit">사용 불가</span>':'<span class="pill ok">사용 가능</span>')+'</div>'+
+    '<div class="exit"><b>비상구 2 · 동쪽</b><span class="pill ok">사용 가능</span>'+(fire?'<span class="muted mono" style="font-size:12px">대피 '+reached+'명</span>':'')+'</div>';
+  $("#fbW").classList.toggle("on",!!fire);
+  const items=LOG.filter(l=>t>=l[0]);
+  if(items.length!==lastLogN){
+    const ol=$("#log ol");
+    ol.innerHTML=items.slice().reverse().map((l,i)=>'<li class="'+l[3]+(i===0&&items.length>lastLogN&&lastLogN>=0?' new':'')+'"><span class="tm">'+fmt(l[0])+'</span><span class="who">'+l[1]+'</span><span>'+esc(l[2])+'</span></li>').join("")||'<li><span class="tm">—</span><span class="who">관제</span><span class="muted">재생을 누르면 이벤트가 여기에 쌓입니다</span></li>';
+    lastLogN=items.length;
+  }
+  $("#clock").textContent=fmt(t)+" / 3:30";$("#scrub").value=t;
+  const sc=SCENES.find(s=>t>=s.s&&t<s.e)||SCENES[SCENES.length-1];
+  $("#sceneNow").innerHTML='장면 <b>'+(SCENES.indexOf(sc)+1)+' · '+sc.name+'</b>';
+}
+let playing=false,speed=4,lastTs=0,raf=0;
+function tick(ts){if(!playing)return;const dt=lastTs?(ts-lastTs)/1000:0;lastTs=ts;let t=simT+dt*speed;if(t>=DUR){t=DUR;renderSim(t);pause();return}renderSim(t);raf=requestAnimationFrame(tick)}
+function play(){if(simT>=DUR){lastLogN=-1;simT=0}playing=true;lastTs=0;$("#playBtn").textContent="일시정지";raf=requestAnimationFrame(tick)}
+function pause(){playing=false;cancelAnimationFrame(raf);$("#playBtn").textContent=simT>=DUR?"처음부터":"재생"}
+$("#playBtn").onclick=()=>playing?pause():play();
+segBind("#segSpeed",v=>{speed=+v});
+$("#scrub").addEventListener("input",e=>{lastLogN=-1;renderSim(+e.target.value)});
+renderSim(0);
+
+/* ---------- 6. demo ---------- */
+$("#timeline").innerHTML=SCENES.map((s,i)=>'<button type="button" class="k-'+(s.k||"none")+'" style="flex:'+(s.e-s.s)+' 1 0" data-t="'+s.s+'" title="'+fmt(s.s)+'–'+fmt(s.e)+' '+s.name+'">'+(i+1)+' '+s.name+'</button>').join("");
+$("#sceneBody").innerHTML=SCENES.map((s,i)=>'<tr><td>'+fmt(s.s)+'–'+fmt(s.e)+'</td><td><b>'+(i+1)+' · '+s.name+'</b></td><td>'+esc(s.robot)+'</td><td>'+esc(s.people)+'</td><td>'+s.show+'</td><td><button type="button" class="linkbtn" data-t="'+s.s+'">이 장면 보기</button></td></tr>').join("");
+document.addEventListener("click",e=>{const b=e.target.closest("[data-t]");if(!b)return;pause();lastLogN=-1;renderSim(+b.dataset.t+0.5);
+  const pl=$("#player");const top=pl.getBoundingClientRect().top+window.scrollY-60;window.scrollTo({top,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})});
+/* 관제 탭: 단계별로 쌓아 보기 */
+(function(){
+  function snap(t){
+    const zones={};for(const k in Z)zones[k]="idle";ZEV.forEach(([tt,k,s])=>{if(t>=tt)zones[k]=s});
+    const fire=t>=120?"west":null;
+    const robots=["A","B","C","D"].map(id=>{const [x,y]=posOf(id,t);const r={id,x,y,num:physOf(id,t)};if(id==="C"&&t>=39&&t<SWAP)r.flag="배터리 20% · 복귀",r.flagC="warn";if(id==="D"&&t>=44&&t<SWAP)r.flag="교대 출동",r.flagC="ok";
+      if(id==="A"&&t>=126)r.arrow="→";if(id==="C"&&t>=120)r.arrow="→";if(id==="B"&&t>=120)r.arrow="→";
+      if(id==="B"&&t>=64&&t<93)r.arrow="X";return r});
+    const people=PK.map(l=>{const [x,y]=kf(l,t);return {x,y,hidden:t>=l[l.length-1][0]}});
+    return {zones,segs:segsAt(t),fire,robots,people,boxes:t>=60&&t<93?[OB.c1]:[],xmarks:t>=126?[[30,194]]:[],exitBad:fire?{EX1:true}:{},
+      paths:t>=126&&t<160?[{pts:[N.J1,N.J2,N.J3,N.E,N.EX2],kind:"ok"},{pts:[N.BM,N.BE,N.E,N.EX2],kind:"ok"}]:[]};
+  }
+  const T1=87,T2=128,s1=snap(T1),s2=snap(T2);
+  const bare=s1.robots.map(r=>({id:r.id,x:r.x,y:r.y}));
+  const L={zone:'<span><i style="background:var(--floor2)"></i>구역 8칸</span><span><i style="background:var(--route)"></i>간선</span><span><i style="background:none;border:2px dashed var(--route)"></i>지선</span>',
+    cp:'<span><i style="background:var(--tape-yellow)"></i>노랑 CP</span><span><i style="background:var(--tape-blue)"></i>파랑 CP</span><span><i style="background:var(--robot);border-radius:50%"></i>메카독</span>',
+    st:'<span><i style="background:var(--ok-bg);border:1px solid var(--ok)"></i>정상</span><span><i style="background:var(--warn-bg);border:1px solid var(--warn)"></i>미확정</span><span><i style="background:var(--crit-bg);border:1px solid var(--crit)"></i>확정</span><span><i style="background:var(--floor2)"></i>미점검</span>',
+    fire:'<span><i style="background:var(--crit);border-radius:50%"></i>발화</span><span><i style="background:var(--ok)"></i>대피 경로</span><span><i style="background:none;border:2px dashed var(--signal);border-radius:50%"></i>사각지대 지점</span>'};
+  const why=(tag,nm,w,d)=>'<div class="rcard" style="grid-template-columns:30px minmax(0,1fr)"><span class="tag">'+tag+'</span><div style="min-width:0"><div class="nm">'+nm+'</div><div class="st"><b style="color:var(--ink)">왜 거기:</b> '+w+'<br><b style="color:var(--ink)">하는 일:</b> '+d+'</div></div></div>';
+  const STEPS=[
+    {n:"1",name:"지도와 구역",legend:L.zone,map:{},
+     html:'<h3>1단계 · 지도와 구역</h3><p>작업장을 위에서 본 지도입니다. 먼저 "어디를 보는 화면인지"만 보여 줍니다.</p><dl class="kv"><dt>보관동 구역</dt><dd>A1·A2·A3 보관 랙 (위)</dd><dt>간선</dt><dd>C1·C2, 양 끝 비상구 1·2 (가운데)</dd><dt>작업장 구역</dt><dd>B1·B2 작업 라인, 사무·도크 (아래)</dd><dt>길</dt><dd>실선은 간선, 점선은 구역 둘레와 사이 통로(지선)</dd></dl><p class="muted" style="font-size:13px">구역은 예은 안대로 8칸으로 나눴습니다.</p>'},
+    {n:"2",name:"로봇 위치",legend:L.zone+L.cp+'<span><i style="background:none;border:2px dashed var(--robot)"></i>A의 현재 구간 (CP3~CP4 사이)</span>',map:{cps:true,robots:bare,people:s1.people,paths:[{pts:[[385,40],[560,40]],kind:"plan"}],markers:[{x:440,y:40,label:"A 위치 = CP3~CP4 사이",anc:"middle",dx:0,dy:22,c:"var(--robot)"}]},
+     html:'<h3>2단계 · 로봇이 어디 있나</h3><p>메카독에는 GPS가 없으니, 길이 꺾이거나 만나는 12곳에 바닥 마커(CP)를 붙입니다. 번호는 왼쪽 위 1번부터 오른쪽으로 셉니다. 마커는 <b>노랑과 파랑을 줄마다 번갈아</b> 붙이고, 모든 로봇은 도크 앞 CP11(파랑)에서 왼쪽으로 나가 왼쪽 벽을 타고 올라갑니다. 그래서 지나온 색 순서가 위치가 됩니다(파노 = CP10, 파노노 = CP5, 파노노노 = CP1). 자세한 건 <a href="#demo" data-jump="demo">6 · 시연</a> 탭의 위치 시연에 있습니다.</p><p style="margin-top:8px"><b>지난 CP와 다음 CP 사이 = 현재 위치.</b> 예를 들어 A는 CP4를 지났고 CP3은 아직이라 "CP3~CP4 사이"입니다. 지도에 노란 점선으로 표시한 구간입니다.</p><div class="eyebrow" style="margin-top:12px">지금(시연 1:27) A~D는 왜 거기 있나</div><div style="display:grid;gap:6px;margin-top:6px">'+
+       why("A","보관구역 순찰 · CP3~CP4 사이","보관동 둘레(벽 쪽 윗길)를 도는 중","랙 하단 적재와 배터리 외관 확인")+
+       why("D","재확인 · CP6~CP7 사이, 박스 오른쪽","B가 막힘을 알려서 도크에서 출동함","다시 재서 두 번 다 막혔으면 확정, 관리자 호출")+
+       why("B","대피로 점검 · CP6~CP7 사이, 박스 왼쪽","30 cm 앞 물체가 3초 넘게 있어서 멈춤","X 표시와 음성으로 알리고 치울 때까지 대기")+
+       why("C","설비·안내 · 아랫길 CP11~CP12 사이","작업장 둘레(아랫길)를 도는 중","경고등, 소화기·표지 자리 확인")+'</div>'},
+    {n:"3",name:"이상 표시",legend:L.st+L.cp,map:{zones:s1.zones,segs:s1.segs,cps:true,robots:s1.robots,people:s1.people,boxes:s1.boxes},
+     html:'<h3>3단계 · 어디에 문제가 있나</h3><p>체크포인트 방식이라 색도 <b>CP와 CP 사이 구간</b> 단위로 칠합니다. 로봇이 지나간 구간은 초록이 되고, 문제가 생긴 구간만 색이 바뀝니다. 보관 랙과 작업 라인은 점검이 끝나면 구역째로 초록이 됩니다.</p><dl class="kv"><dt>회색</dt><dd>아직 안 지나감</dd><dt>초록</dt><dd>지나가면서 이상 없음 확인</dd><dt>노랑</dt><dd>이상 감지 · 미확정 (한 대만 봄)</dd><dt>빨강</dt><dd>D가 다시 재서 확정 · 관리자 호출</dd></dl><p class="muted" style="font-size:13px">지금 화면: B가 CP6~CP7 사이에서 박스를 발견했고(X), D가 와서 확정해 <b style="color:var(--ink)">CP6~CP7 사이 구간만</b> 빨강입니다. 바로 옆 CP5~CP6 구간은 이미 지나가며 확인했으니 초록입니다.</p>'},
+    {n:"4",name:"비상 모드",legend:L.fire+L.cp,map:{zones:s2.zones,segs:s2.segs,cps:true,blind:true,fire:s2.fire,exitBad:s2.exitBad,robots:s2.robots,people:s2.people,xmarks:s2.xmarks,paths:s2.paths},
+     html:'<h3>4단계 · 불이 나면</h3><p>노트북의 "서쪽 화재" 버튼(화재 수신기 역할)을 누르면 화면이 비상 모드로 바뀝니다.</p><dl class="kv"><dt>발화</dt><dd>A1 랙 · 1:40에 A가 알린 손상 배터리</dd><dt>비상구 1</dt><dd>불 쪽이라 사용 불가 (빨강)</dd><dt>로봇</dt><dd>A·B·C가 사각지대(CP6·CP8·CP11)에서 → 화살표와 음성. 불 쪽 길은 X. D는 도크에서 수색 대기 (2안 기준. 1안이면 D는 CP7, C는 CP10)</dd><dt>초록 경로</dt><dd>사람들이 비상구 2로 나가는 길</dd></dl><p class="muted" style="font-size:13px">시연 2:08 시점입니다.</p>'},
+    {n:"전체",name:"다 합치면",legend:L.st+L.fire,map:{zones:s2.zones,segs:s2.segs,cps:true,blind:true,fire:s2.fire,exitBad:s2.exitBad,robots:s2.robots,people:s2.people,xmarks:s2.xmarks,paths:s2.paths},full:true}];
+  function fullHtml(t){
+    const cards=["A","B","C","D"].map(id=>{const [,txt,lv]=curStatus(id,t);return '<div class="rcard"><span class="tag">'+id+'</span><div style="min-width:0"><div class="nm">'+RNAME[id]+' <span class="muted mono" style="font-weight:400;font-size:11.5px">· '+physOf(id,t)+'번 로봇</span></div><div class="st">'+txt+'</div></div><span class="pill '+lv+'">'+(lv==="fire"?"비상":lv==="crit"?"확정":lv==="warn"?"주의":lv==="ok"?"정상":"대기")+'</span></div>'}).join("");
+    const logs=LOG.filter(l=>t>=l[0]).slice(-5).reverse().map(l=>'<li class="'+l[3]+'"><span class="tm">'+fmt(l[0])+'</span><span class="who">'+l[1]+'</span><span>'+esc(l[2])+'</span></li>').join("");
+    return '<h3>다 합치면 · 실제 관제 화면</h3><p class="muted" style="font-size:13px">1~4단계를 모두 겹친 지도에 아래 네 가지가 붙은 것이 실제 화면입니다.</p>'+
+      '<div class="eyebrow" style="margin-top:10px">① 로봇 상태</div><div style="display:grid;gap:6px;margin-top:4px">'+cards+'</div>'+
+      '<div class="eyebrow" style="margin-top:10px">② 비상구 상태 · ③ 화재 버튼</div><div class="exits" style="margin-top:4px"><div class="exit"><b>비상구 1</b><span class="pill crit">사용 불가</span></div><div class="exit"><b>비상구 2</b><span class="pill ok">사용 가능</span></div></div><div class="firebtns" style="margin-top:6px"><div class="firebtn on">서쪽 화재</div><div class="firebtn">동쪽 화재</div></div>'+
+      '<div class="eyebrow" style="margin-top:10px">④ 이벤트 로그 (최근 5개)</div><div class="log" style="margin-top:4px"><ol>'+logs+'</ol></div>';
+  }
+  const mv=mapView($("#mapCtlStatic"));
+  let cur=0;
+  $("#ctlSteps").innerHTML=STEPS.map((s,i)=>'<button type="button" class="fbtn" data-step="'+i+'">'+(s.n==="전체"?"":s.n+"단계 · ")+s.name+'</button>').join("");
+  function show(i){cur=i;const s=STEPS[i];mv.render(s.map);$("#ctlLegend").innerHTML=s.legend;
+    const nav='<div class="controls" style="justify-content:space-between;margin-top:14px"><button type="button" class="linkbtn" data-step="'+Math.max(0,i-1)+'"'+(i===0?' disabled':'')+'>← 이전</button>'+(i<STEPS.length-1?'<button type="button" class="pbtn" data-step="'+(i+1)+'">다음 · '+STEPS[i+1].name+' →</button>':'<span></span>')+'</div>';
+    $("#ctlText").innerHTML=(s.full?fullHtml(T2):s.html)+nav;
+    document.querySelectorAll("#ctlSteps .fbtn").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.step===i?"true":"false"));}
+  document.getElementById("p-control").addEventListener("click",e=>{const b=e.target.closest("[data-step]");if(b&&!b.disabled)show(+b.dataset.step)});
+  show(0);
+})();
+
+/* 바닥 테이프 시연 · 홀수 노랑 짝수 파랑 */
+(function(){
+  const svg=$("#tapeSvg");if(!svg)return;
+  const LINE_Y=112,X0=20,X1=700;
+  const CPX=[{c:"CP5",x:60},{c:"CP6",x:255},{c:"CP7",x:352},{c:"CP8",x:447},{c:"CP9",x:640}];
+  const Y=c=>REFCP.includes(c);
+  CPX.forEach(p=>p.ref=Y(p.c));
+  const SEQ=CPX.map(p=>p.c);
+  const DUR=11;let tt=0,playing=false,last=0,raf=0,seen=new Set(),idx=null,logs=[],finger="";
+  function base(){
+    let s='<rect x="0" y="0" width="720" height="210" fill="var(--floor)"/>';
+    s+='<rect x="'+X0+'" y="'+(LINE_Y-5)+'" width="'+(X1-X0)+'" height="10" fill="var(--tape-green)"/>';
+    CPX.forEach(p=>{s+='<rect x="'+(p.x-5)+'" y="'+(LINE_Y-20)+'" width="10" height="40" fill="'+(p.ref?"var(--tape-yellow)":"var(--tape-blue)")+'" stroke="var(--ink)" stroke-opacity=".35"/>';
+      s+='<text x="'+p.x+'" y="'+(LINE_Y+40)+'" text-anchor="middle" font-size="12" font-weight="700" font-family="var(--font-mono)" fill="var(--ink)">'+p.c+'</text>';
+      s+='<text x="'+p.x+'" y="'+(LINE_Y+55)+'" text-anchor="middle" font-size="10.5" font-family="var(--font-sans)" fill="var(--muted)">'+(p.ref?"노랑":"파랑")+'</text>'});
+    s+='<g font-family="var(--font-mono)" font-size="10.5" fill="var(--muted)"><line x1="'+(CPX[2].x+16)+'" y1="'+(LINE_Y-20)+'" x2="'+(CPX[2].x+16)+'" y2="'+(LINE_Y+20)+'" stroke="var(--muted)"/><text x="'+(CPX[2].x+20)+'" y="'+(LINE_Y-10)+'">20 cm</text>';
+    s+='<line x1="'+(X1-6)+'" y1="'+(LINE_Y-5)+'" x2="'+(X1-6)+'" y2="'+(LINE_Y+5)+'" stroke="var(--muted)"/><text x="'+(X1-10)+'" y="'+(LINE_Y-10)+'" text-anchor="end">초록 5 cm</text></g>';
+    s+='<text x="20" y="24" font-size="12" font-weight="700" font-family="var(--font-sans)" fill="var(--ink)">위에서 본 모습 · 간선 B 순찰 길 (노 · 파 · 노 · 파 · 노)</text>';
+    s+='<text x="700" y="24" text-anchor="end" font-size="11" font-family="var(--font-sans)" fill="var(--muted)">비상구 1 쪽 ← → 비상구 2 쪽</text>';
+    s+='<g id="tapeRobot"></g>';
+    return s;
+  }
+  svg.innerHTML=base();
+  const robotG=svg.querySelector("#tapeRobot");
+  const camX=x=>x+36;
+  function colorAt(cx){for(const p of CPX){if(Math.abs(cx-p.x)<=5)return p}return null}
+  function draw(x){
+    const cx=camX(x);const under=colorAt(cx);const missed=under&&$("#tapeMiss").checked&&under.c==="CP7";
+    robotG.innerHTML='<path d="M'+(cx-6)+' '+(LINE_Y-12)+' L'+(cx+22)+' '+(LINE_Y-26)+' L'+(cx+22)+' '+(LINE_Y+26)+' L'+(cx-6)+' '+(LINE_Y+12)+' Z" fill="var(--signal)" fill-opacity=".12" stroke="var(--signal)" stroke-opacity=".5" stroke-dasharray="3 3"/>'+
+      '<rect x="'+(x-27)+'" y="'+(LINE_Y-13)+'" width="54" height="26" rx="6" fill="var(--robot)" stroke="var(--ink)" stroke-width="1.5"/>'+
+      '<rect x="'+(x+22)+'" y="'+(LINE_Y-9)+'" width="12" height="18" rx="3" fill="var(--robot)" stroke="var(--ink)" stroke-width="1.5"/>'+
+      '<circle cx="'+cx+'" cy="'+LINE_Y+'" r="3.5" fill="var(--ink)"/>'+
+      '<text x="'+(x-4)+'" y="'+(LINE_Y+4.5)+'" text-anchor="middle" font-size="12" font-weight="700" font-family="var(--font-mono)" fill="var(--robot-ink)">B</text>'+
+      (under?'<text x="'+cx+'" y="'+(LINE_Y-32)+'" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-sans)" fill="'+(missed?"var(--crit)":under.ref?"var(--warn)":"var(--signal)")+'">'+(missed?"놓침!":(under.ref?"노랑":"파랑"))+'</text>':'');
+    const col=under&&!missed?(under.ref?"var(--tape-yellow)":"var(--tape-blue)"):"var(--tape-green)";
+    const name=under&&!missed?(under.ref?"노랑 보임 → 색 보냄":"파랑 보임 → 색 보냄"):(missed?"(못 보고 지나감)":"초록 → 길 따라 걷는 중");
+    $("#tapeCam").innerHTML='<span style="width:44px;height:44px;border-radius:8px;background:'+col+';border:1px solid var(--line);flex:none"></span><span><b>'+name+'</b><br><span class="muted" style="font-size:12.5px">지금까지 보낸 색: <b class="mono" style="color:var(--ink)">'+(finger||"없음")+'</b></span></span>';
+  }
+  function renderLog(){$("#tapeLog").innerHTML=logs.map(l=>'<li class="'+l[2]+'"><span class="tm">'+l[0]+'</span><span class="who">노트북</span><span>'+l[1]+'</span></li>').join("")||'<li><span class="tm">—</span><span class="who">노트북</span><span class="muted">재생을 누르면 B가 CP5에서 출발합니다</span></li>'}
+  function step(x){
+    const cx=camX(x);const p=colorAt(cx);
+    if(p&&!seen.has(p.c)){seen.add(p.c);
+      if($("#tapeMiss").checked&&p.c==="CP7"){/* 신호 없음 */}
+      else{const c=p.ref?"노":"파";finger+=c;
+        if(idx===null){idx=0;logs.push([c,"출발 · "+SEQ[0]+" 확인","ok"])}
+        else{const e1=SEQ[idx+1],e2=SEQ[idx+2];
+          if(e1&&Y(e1)===p.ref){idx++;logs.push([c,"색 맞음 → "+SEQ[idx],"info"])}
+          else if(e2&&Y(e2)===p.ref){idx+=2;logs.push([c,(p.ref?"노랑":"파랑")+"이 연속 · "+e1+"("+(Y(e1)?"노랑":"파랑")+")이 나와야 했음 → 마커 하나 놓침 → "+SEQ[idx]+"로 맞춤","crit"])}
+          else logs.push([c,"색이 안 맞음 · 위치 확인 필요","crit"])}
+        renderLog()}}
+    draw(x);
+  }
+  function xAt(tt){return 12+(660-12)*(tt/DUR)}
+  function reset(){tt=0;seen=new Set();idx=null;logs=[];finger="";renderLog();step(xAt(0))}
+  function tick(ts){if(!playing)return;const dt=last?(ts-last)/1000:0;last=ts;tt=Math.min(DUR,tt+dt);step(xAt(tt));if(tt>=DUR){playing=false;$("#tapePlay").textContent="다시 재생";return}raf=requestAnimationFrame(tick)}
+  $("#tapePlay").onclick=()=>{if(playing){playing=false;cancelAnimationFrame(raf);$("#tapePlay").textContent="재생";return}if(tt>=DUR||tt===0)reset();playing=true;last=0;$("#tapePlay").textContent="일시정지";raf=requestAnimationFrame(tick)};
+  $("#tapeMiss").addEventListener("change",()=>{playing=false;cancelAnimationFrame(raf);$("#tapePlay").textContent="재생";reset()});
+  reset();
+})();
+
+/* A·B·C 위치 추적 시연 · 도크 출발 */
+(function(){
+  const el=$("#trkMap");if(!el)return;
+  const mv=mapView(el);
+  const CPN={};CPS.forEach(([c,k])=>CPN[k]=c);
+  const SPEED=70;
+  const R={
+    A:{name:"보관동 윗길",slot:[270,372],delay:0,entry:["BM","BW","W","TW"],patrol:["TW","T1","T2","TE"]},
+    B:{name:"간선",slot:[300,372],delay:2.5,entry:["BM","BW","W"],patrol:["W","J1","J2","J3","E"]},
+    C:{name:"작업장 아랫길",slot:[330,372],delay:5,entry:["BM","BW"],patrol:["BW","BM","BE"]}};
+  // build waypoint list + cumulative distance per robot
+  for(const id in R){const r=R[id];const pts=[{p:r.slot,n:null}];r.entry.forEach(n=>pts.push({p:N[n],n}));
+    const back=r.patrol.slice(0,-1).reverse();let cur=r.patrol;
+    for(let k=0;k<8;k++){const seq=(k%2===0?r.patrol.slice().reverse():r.patrol).slice(1);seq.forEach(n=>pts.push({p:N[n],n}))}
+    // first patrol leg must go away from the entry end
+    r.pts=pts;let d=0;r.cum=pts.map((q,i)=>{if(i>0)d+=Math.hypot(q.p[0]-pts[i-1].p[0],q.p[1]-pts[i-1].p[1]);return d});
+    r.seq=pts.slice(1).map(q=>CPN[q.n]);r.entryLen=r.entry.length}
+  // fix patrol direction: after reaching entry end (patrol[0]) go toward patrol[last]
+  for(const id in R){const r=R[id];const pts=[{p:r.slot,n:null}];r.entry.forEach(n=>pts.push({p:N[n],n}));
+    let fwd=true;for(let k=0;k<8;k++){const seq=fwd?r.patrol.slice(1):r.patrol.slice(0,-1).reverse();seq.forEach(n=>pts.push({p:N[n],n}));fwd=!fwd}
+    r.pts=pts;let d=0;r.cum=pts.map((q,i)=>{if(i>0)d+=Math.hypot(q.p[0]-pts[i-1].p[0],q.p[1]-pts[i-1].p[1]);return d});r.seq=pts.slice(1).map(q=>CPN[q.n])}
+  const END=32;let tt=0,playing=false,last=0,raf=0,st,logs;
+  const dist=(id,t)=>Math.max(0,(t-R[id].delay)*SPEED);
+  function posAt(id,t){const r=R[id],d=dist(id,t);let i=0;while(i<r.cum.length-1&&r.cum[i+1]<=d)i++;if(i>=r.cum.length-1)return {x:r.pts[i].p[0],y:r.pts[i].p[1],i};
+    const f=(d-r.cum[i])/(r.cum[i+1]-r.cum[i]);return {x:r.pts[i].p[0]+(r.pts[i+1].p[0]-r.pts[i].p[0])*f,y:r.pts[i].p[1]+(r.pts[i+1].p[1]-r.pts[i].p[1])*f,i}}
+  const isRef=c=>REFCP.includes(c);
+  const FP={A:"파노노노",B:"파노노",C:"파노"};
+  function reset(){tt=0;logs=[[0,"관제","세 대 모두 도크에서 대기 · 출발 순서 A → B → C","info"]];st={};for(const id in R)st[id]={idx:-1,passed:0,started:false,fp:""};render()}
+  function advance(dt){tt+=dt;
+    for(const id in R){const r=R[id],s=st[id];
+      if(!s.started&&tt>=r.delay){s.started=true;logs.push([tt,id,"도크 출발","info"])}
+      const pos=posAt(id,tt);
+      while(s.passed<pos.i){s.passed++;const actual=r.seq[s.passed-1];
+        if($("#trkMiss").checked&&id==="A"&&actual==="CP3"){continue}
+        const y=isRef(actual),c=y?"노":"파";s.fp+=c;
+        const e1=r.seq[s.idx+1],e2=r.seq[s.idx+2];
+        if(e1&&isRef(e1)===y){s.idx++;
+          const arrived=s.idx===r.entryLen-1;
+          logs.push([tt,id,c+" · 색 맞음 → "+r.seq[s.idx]+(arrived?" · 지문 "+s.fp+" = 내 길 도착, 왕복 시작":""),arrived?"ok":"info"])}
+        else if(e2&&isRef(e2)===y){s.idx+=2;logs.push([tt,id,c+" · "+(y?"노랑":"파랑")+"이 연속 → "+e1+" 마커를 놓침 → "+r.seq[s.idx]+"로 바로 맞춤","crit"])}
+        else logs.push([tt,id,c+" · 색이 안 맞음 · 위치 확인 필요","crit"]);
+      }}
+    if(logs.length>60)logs=logs.slice(-60)}
+  function lab(id,i){return i<0?"도크":R[id].seq[i]}
+  function render(){
+    const robots=Object.keys(R).map(id=>{const q=posAt(id,tt);return {id,x:q.x,y:q.y}});
+    mv.render({cps:true,cpReal:true,robots});
+    $("#trkPanel").innerHTML=Object.keys(R).map(id=>{const r=R[id],s=st[id],q=posAt(id,tt);
+      const guess=lab(id,s.idx)+(s.idx+1<r.seq.length?"~"+lab(id,s.idx+1):"");
+      const real=(q.i===0?"도크":r.seq[q.i-1])+"~"+r.seq[q.i];
+      const ok=guess===real||(!s.started&&q.i===0);
+      const phase=!s.started?"도크 대기":s.idx<r.entryLen-1?"내 길로 가는 중":"내 길 왕복 중";
+      const chip=(c,on)=>'<span class="mono" style="padding:2px 6px;border-radius:5px;font-size:11.5px;background:'+(c==="도크"?"var(--floor2)":isRef(c)?"var(--tape-yellow)":"var(--tape-blue)")+';color:'+(c==="도크"?"var(--ink)":isRef(c)?"#1c2220":"#fff")+';outline:'+(on?"2px solid var(--ink)":"none")+';outline-offset:1px">'+c+'</span>';
+      const cur=lab(id,s.idx),inEntry=s.idx<r.entryLen;
+      const entryRow=["도크"].concat(r.entry.map(n=>CPN[n])).map((c,k)=>chip(c,inEntry&&k===s.idx+1)).join('<span class="muted">→</span>');
+      const patRow=r.patrol.map(n=>CPN[n]).map(c=>chip(c,!inEntry&&c===cur)).join('<span class="muted">↔</span>');
+      return '<div class="rcard" style="grid-template-columns:30px minmax(0,1fr)"><span class="tag">'+id+'</span><div style="min-width:0"><div class="nm">'+r.name+' <span class="muted" style="font-weight:400;font-size:12px">· '+phase+'</span></div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0"><span class="muted" style="font-size:11.5px;width:30px">출발</span>'+entryRow+'</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:0 0 4px"><span class="muted" style="font-size:11.5px;width:30px">왕복</span>'+patRow+'</div>'+
+        '<div class="st">지문: <b class="mono" style="color:var(--ink)">'+(s.fp.slice(0,r.entryLen)||"—")+'</b> <span class="muted">(도착 지문 '+FP[id]+')</span><br>노트북: <b style="color:var(--'+(ok?"ink":"crit")+')">'+(s.started?guess:"도크")+'</b>'+(ok?'':' · 실제는 '+real)+'</div></div></div>'}).join("")+
+      '<p class="muted" style="font-size:12.5px">테두리가 있는 칸 = 노트북이 생각하는 "마지막으로 지난 곳"입니다. 세 대 모두 CP11에서 왼쪽으로만 나가 왼쪽 벽을 타고 올라가므로, 나가는 길에 갈림길에서 고를 일이 없습니다. 각자 "몇 번째 노랑에서 멈추나"만 다릅니다.</p>';
+    $("#trkLog").innerHTML=logs.slice().reverse().map(l=>'<li class="'+l[3]+'"><span class="tm">'+(l[0]?l[0].toFixed(1)+"s":"0s")+'</span><span class="who">'+l[1]+'</span><span>'+esc(l[2])+'</span></li>').join("");
+  }
+  function tick(ts){if(!playing)return;const dt=last?Math.min(.1,(ts-last)/1000):0;last=ts;advance(dt);render();if(tt>=END){playing=false;$("#trkPlay").textContent="다시 재생";return}raf=requestAnimationFrame(tick)}
+  $("#trkPlay").onclick=()=>{if(playing){playing=false;cancelAnimationFrame(raf);$("#trkPlay").textContent="재생";return}if(tt>=END)reset();playing=true;last=0;$("#trkPlay").textContent="일시정지";raf=requestAnimationFrame(tick)};
+  $("#trkMiss").addEventListener("change",()=>{playing=false;cancelAnimationFrame(raf);$("#trkPlay").textContent="재생";reset()});
+  reset();
+})();
+
+const MATS=[
+  ["초록 바닥 테이프 (5 cm 폭)","길 전체 약 30 m + 꺾는 곳 곡선, 길 끝 회전 고리, 다시 붙일 여유","50 m"],
+  ["노랑·파랑 바닥 테이프","체크포인트 12곳 · 노랑 7곳(CP1·3·5·7·9·10·12), 파랑 5곳(CP2·4·6·8·11). 길을 가로질러 1곳당 약 20 cm","각 2 m"],
+  ["흰 바닥 테이프","구역 경계 (보관 랙 3, 작업 라인 2, 사무·도크). 길과 겹치지 않게","20 m"],
+  ["골판지 박스 (중, 높이 30 cm 안팎)","보관 랙 3개(각 약 1.2 m × 1.6 m 테두리), 작업 라인 2개(각 약 2 m × 0.9 m) 벽","20~25개"],
+  ["골판지 박스 (소)","통로 장애물(CP6~CP7 사이), 배터리 모형","6개"],
+  ["폼보드 (A2)","비상구 문틀 2, 가벽, 구역 이름판, 곡선 테이프 붙일 때 쓸 반지름 R 원형 틀","6장"],
+  ["빨간 원형 스티커","배터리 외관 손상 표시 (A1 랙, 바닥에서 30 cm 아래)","1팩"],
+  ["검정 색 카드","소화기·표지 자리 마커 (C가 확인)","4장"],
+  ["빨간 LED 경고등 (건전지식)","C가 감지할 경고등 · 바닥에서 30 cm 아래","2개"],
+  ["비상구 표지 출력물","비상구 2곳","2장"],
+  ["분홍 색 밴드","2안 요구조자 다리 표시 (2안일 때만)","2개"],
+  ["밝은 색 바닥 매트 또는 시트 (선택)","테이프 붙일 바닥 · 검정 카드가 잘 보이게 밝은 색, 반사 적은 것","5 m × 5 m"],
+  ["공유기","로봇 4대, 노트북, 폰을 한 네트워크로 (관제 화면 통신)","1대"],
+  ["줄자 (5 m 이상)","미션맵 배치, 메카독 회전 반지름 R 실측","1개"]];
+const matState=store.get("mecadog-mats",{});
+function renderMats(){
+  $("#mats").innerHTML=MATS.map((m,i)=>'<label class="mat'+(matState[i]?' done':'')+'" for="mat'+i+'"><input type="checkbox" id="mat'+i+'"'+(matState[i]?' checked':'')+'><span style="min-width:0"><span class="nm"><b class="mono">'+(i+1)+'</b> '+m[0]+'</span><br><span class="u">'+m[1]+'</span></span><span class="q">'+m[2]+'</span></label>').join("");
+  $("#matCount").textContent=MATS.filter((m,i)=>matState[i]).length+" / "+MATS.length+" 준비";
+}
+renderMats();
+$("#mats").addEventListener("change",e=>{const i=+e.target.id.slice(3);matState[i]=e.target.checked;store.set("mecadog-mats",matState);renderMats()});
+mapView($("#mapDemo")).render({dims:true,cps:true,cpReal:true,blind:true,hlEdges:EDGES.filter(e=>e[1]!=="DK"),boxes:[OB.c1],
+  markers:[{x:128,y:66},{x:170,y:328},{x:430,y:328,c:"var(--ok)"}],people:[{x:470,y:327}],
+  nums:[{x:130,y:220,n:1},{x:300,y:198,n:2},{x:300,y:242,n:3},{x:128,y:120,n:4},{x:257,y:244,n:5},{x:14,y:268,n:10},{x:150,y:84,n:7},{x:448,y:310,n:8},{x:188,y:310,n:9},{x:494,y:312,n:11}]});
+
+showTab();
+})();
+</script>
